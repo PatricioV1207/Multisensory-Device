@@ -1,0 +1,47 @@
+# Payload de telemetría
+
+## Política temporal
+
+ThingsBoard asigna la fecha al recibir el mensaje. `uptime_ms` es tiempo desde
+el arranque, no Unix epoch. Un broker genérico debe fechar el mensaje al
+recibirlo o añadir NTP en una fase posterior.
+
+## Campos
+
+| Grupo | Campos | Unidad |
+|---|---|---|
+| Identidad | `schema_version`, `device_id`, `uptime_ms` | — |
+| DHT11 | `temperature_c`, `humidity_percent` | °C, % |
+| GPS | `latitude`, `longitude`, `altitude_m`, `speed_kmh`, `satellites` | grados, m, km/h |
+| Acelerómetro | `accel_x`, `accel_y`, `accel_z` | m/s² |
+| Giroscopio | `gyro_x`, `gyro_y`, `gyro_z` | rad/s |
+| Magnetómetro | `mag_x`, `mag_y`, `mag_z` | µT |
+| Barómetro | `pressure_hpa`, `baro_temperature_c`, `baro_altitude_m` | hPa, °C, m |
+
+Las banderas `dht_valid`, `gps_valid`, `accel_valid`, `gyro_valid`,
+`mag_valid`, `baro_valid` e `imu_valid` siempre aparecen. `imu_valid` exige
+acelerómetro, giroscopio y magnetómetro válidos; no depende del barómetro.
+
+## Fallos parciales
+
+Un dato inválido se omite. Por ejemplo, si el GPS aún no tiene fix:
+
+```json
+{
+  "schema_version": 1,
+  "device_id": "bus_iot_prototype_01",
+  "uptime_ms": 12000,
+  "dht_valid": true,
+  "gps_valid": false,
+  "accel_valid": false,
+  "gyro_valid": false,
+  "mag_valid": false,
+  "baro_valid": false,
+  "imu_valid": false,
+  "temperature_c": 25.0,
+  "humidity_percent": 60.0
+}
+```
+
+No se serializan `NaN`, `null` ni valores anteriores obsoletos.
+
