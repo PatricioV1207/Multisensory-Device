@@ -13,7 +13,7 @@ recibirlo o añadir NTP en una fase posterior.
 | Identidad | `schema_version`, `device_id`, `uptime_ms` | — |
 | DHT11 | `temperature_c`, `humidity_percent` | °C, % |
 | GPS | `latitude`, `longitude`, `altitude_m`, `speed_kmh`, `satellites` | grados, m, km/h |
-| Acelerómetro | `accel_x`, `accel_y`, `accel_z` | m/s² |
+| Acelerómetro | `accel_x`, `accel_y`, `accel_z` | m/s² calibrados |
 | Giroscopio | `gyro_x`, `gyro_y`, `gyro_z` | rad/s |
 | Magnetómetro | `mag_x`, `mag_y`, `mag_z` | µT |
 | Barómetro | `pressure_hpa`, `baro_temperature_c`, `baro_altitude_m` | hPa, °C, m |
@@ -21,6 +21,10 @@ recibirlo o añadir NTP en una fase posterior.
 Las banderas `dht_valid`, `gps_valid`, `accel_valid`, `gyro_valid`,
 `mag_valid`, `baro_valid` e `imu_valid` siempre aparecen. `imu_valid` exige
 acelerómetro, giroscopio y magnetómetro válidos; no depende del barómetro.
+
+Los campos `accel_x`, `accel_y` y `accel_z` corresponden a la lectura calibrada
+del ADXL345. La lectura raw se conserva internamente para diagnóstico y aparece
+en `test_adxl345`, pero no se publica en el payload MQTT.
 
 ## Fallos parciales
 
@@ -44,4 +48,3 @@ Un dato inválido se omite. Por ejemplo, si el GPS aún no tiene fix:
 ```
 
 No se serializan `NaN`, `null` ni valores anteriores obsoletos.
-

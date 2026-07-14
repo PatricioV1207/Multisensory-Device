@@ -18,6 +18,10 @@ bool readRegister(uint8_t address, uint8_t reg, uint8_t& value) {
   value = Wire.read();
   return true;
 }
+
+float calibrateAxis(float rawValue, float offset, float scale) {
+  return (rawValue - offset) * scale;
+}
 }  // namespace
 
 bool ADXL345Accel::probe(uint8_t address) const {
@@ -68,12 +72,16 @@ void ADXL345Accel::update(uint32_t nowMs) {
   }
   sensors_event_t event;
   _sensor.getEvent(&event);
-  _data.x = event.acceleration.x;
-  _data.y = event.acceleration.y;
-  _data.z = event.acceleration.z;
+  _data.rawX = event.acceleration.x;
+  _data.rawY = event.acceleration.y;
+  _data.rawZ = event.acceleration.z;
+  _data.x = calibrateAxis(_data.rawX, ADXL_OFFSET_X, ADXL_SCALE_X);
+  _data.y = calibrateAxis(_data.rawY, ADXL_OFFSET_Y, ADXL_SCALE_Y);
+  _data.z = calibrateAxis(_data.rawZ, ADXL_OFFSET_Z, ADXL_SCALE_Z);
   _data.updatedAtMs = nowMs;
-  _data.valid = std::isfinite(_data.x) && std::isfinite(_data.y) &&
-                std::isfinite(_data.z);
+  _data.valid = std::isfinite(_data.rawX) && std::isfinite(_data.rawY) &&
+                std::isfinite(_data.rawZ) && std::isfinite(_data.x) &&
+                std::isfinite(_data.y) && std::isfinite(_data.z);
 }
 
 bool ADXL345Accel::isValid() const {

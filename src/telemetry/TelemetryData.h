@@ -28,6 +28,9 @@ struct AccelData {
   float z = NAN;
   bool valid = false;
   uint32_t updatedAtMs = 0;
+  float rawX = NAN;
+  float rawY = NAN;
+  float rawZ = NAN;
 };
 
 struct GyroData {
@@ -69,4 +72,3 @@ struct TelemetryData {
   GPSData gps;
   GY801Data gy801;
 };
-

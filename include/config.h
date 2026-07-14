@@ -113,6 +113,32 @@
 #define SEA_LEVEL_PRESSURE_HPA 1013.25F
 #endif
 
+// ADXL345 six-position calibration in m/s^2.
+// Raw readings are corrected as: calibrated = (raw - offset) * scale.
+#ifndef ADXL_OFFSET_X
+#define ADXL_OFFSET_X -0.3607F
+#endif
+
+#ifndef ADXL_OFFSET_Y
+#define ADXL_OFFSET_Y -0.1363F
+#endif
+
+#ifndef ADXL_OFFSET_Z
+#define ADXL_OFFSET_Z 1.2093F
+#endif
+
+#ifndef ADXL_SCALE_X
+#define ADXL_SCALE_X 0.95937F
+#endif
+
+#ifndef ADXL_SCALE_Y
+#define ADXL_SCALE_Y 0.96348F
+#endif
+
+#ifndef ADXL_SCALE_Z
+#define ADXL_SCALE_Z 0.99721F
+#endif
+
 // Expected 7-bit addresses. Alternate addresses are probed where supported.
 #define ADXL345_ADDRESS_PRIMARY 0x53
 #define ADXL345_ADDRESS_ALTERNATE 0x1D

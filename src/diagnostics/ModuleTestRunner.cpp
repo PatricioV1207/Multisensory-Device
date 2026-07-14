@@ -1,11 +1,18 @@
 #include "diagnostics/ModuleTestRunner.h"
 
 #include <Wire.h>
+#include <cmath>
 #include "config.h"
 #include "pins.h"
 #include "telemetry/TelemetryBuilder.h"
 #include "utils/I2CScanner.h"
 #include "utils/Logger.h"
+
+namespace {
+float magnitude3(float x, float y, float z) {
+  return std::sqrt((x * x) + (y * y) + (z * z));
+}
+}  // namespace
 
 bool ModuleTestRunner::usesI2C() const {
   return APP_MODE == APP_MODE_TEST_I2C_SCANNER ||
@@ -97,8 +104,13 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
                   d.latitude, d.longitude, static_cast<unsigned long>(d.satellites));
   } else if (APP_MODE == APP_MODE_TEST_ADXL345) {
     const AccelData& d = _accel.getData();
-    Serial.printf("[TEST_ADXL345] valid=%d accel_mps2=%.3f,%.3f,%.3f\n",
-                  d.valid, d.x, d.y, d.z);
+    const float magnitudeRaw = magnitude3(d.rawX, d.rawY, d.rawZ);
+    const float magnitudeCal = magnitude3(d.x, d.y, d.z);
+    Serial.printf("[TEST_ADXL345] valid=%d accel_raw_mps2=%.3f,%.3f,%.3f "
+                  "accel_cal_mps2=%.3f,%.3f,%.3f magnitude_raw_mps2=%.3f "
+                  "magnitude_cal_mps2=%.3f\n",
+                  d.valid, d.rawX, d.rawY, d.rawZ, d.x, d.y, d.z,
+                  magnitudeRaw, magnitudeCal);
   } else if (APP_MODE == APP_MODE_TEST_L3G4200D) {
     const GyroData& d = _gyro.getData();
     Serial.printf("[TEST_L3G4200D] valid=%d gyro_rad_s=%.4f,%.4f,%.4f\n",
@@ -141,4 +153,3 @@ void ModuleTestRunner::publishMqttTest(uint32_t nowMs) {
   Logger::info("MQTT", _mqtt.publish(payload) ? "Test payload published" :
                                                 "Test publish failed");
 }
-
