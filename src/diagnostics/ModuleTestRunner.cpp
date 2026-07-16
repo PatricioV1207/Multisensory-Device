@@ -2,6 +2,7 @@
 
 #include <Wire.h>
 #include <cmath>
+#include "calibration/BarometerCalibrationStore.h"
 #include "config.h"
 #include "pins.h"
 #include "telemetry/TelemetryBuilder.h"
@@ -18,7 +19,8 @@ bool ModuleTestRunner::usesI2C() const {
   return APP_MODE == APP_MODE_TEST_I2C_SCANNER ||
          APP_MODE == APP_MODE_TEST_ADXL345 || APP_MODE == APP_MODE_TEST_L3G4200D ||
          APP_MODE == APP_MODE_TEST_HMC5883L || APP_MODE == APP_MODE_TEST_BMP180 ||
-         APP_MODE == APP_MODE_TEST_GY801;
+         APP_MODE == APP_MODE_TEST_GY801 ||
+         APP_MODE == APP_MODE_CALIBRATE_BMP180;
 }
 
 void ModuleTestRunner::begin() {
@@ -42,10 +44,21 @@ void ModuleTestRunner::begin() {
   } else if (APP_MODE == APP_MODE_TEST_HMC5883L) {
     _mag.begin();
   } else if (APP_MODE == APP_MODE_TEST_BMP180) {
+    const StoredBarometerCalibration calibration =
+        BarometerCalibrationStore::load();
+    _barometer.setCalibration(calibration.seaLevelPressureHpa,
+                              BARO_PRESSURE_OFFSET_HPA, calibration.source);
     _barometer.begin();
   } else if (APP_MODE == APP_MODE_TEST_GY801) {
     I2CScanner::scan();
+    const StoredBarometerCalibration calibration =
+        BarometerCalibrationStore::load();
+    _gy801.setBarometerCalibration(calibration.seaLevelPressureHpa,
+                                   BARO_PRESSURE_OFFSET_HPA,
+                                   calibration.source);
     _gy801.begin();
+  } else if (APP_MODE == APP_MODE_CALIBRATE_BMP180) {
+    _barometerCalibrationRunner.begin();
   } else if (APP_MODE == APP_MODE_TEST_WIFI ||
              APP_MODE == APP_MODE_TEST_MQTT_WIFI) {
     _wifi.begin();
@@ -75,6 +88,8 @@ void ModuleTestRunner::update(uint32_t nowMs) {
     _barometer.update(nowMs);
   } else if (APP_MODE == APP_MODE_TEST_GY801) {
     _gy801.update(nowMs);
+  } else if (APP_MODE == APP_MODE_CALIBRATE_BMP180) {
+    _barometerCalibrationRunner.update(nowMs);
   } else if (APP_MODE == APP_MODE_TEST_WIFI ||
              APP_MODE == APP_MODE_TEST_MQTT_WIFI) {
     _wifi.update(nowMs);
@@ -99,9 +114,11 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
                   d.humidityPercent);
   } else if (APP_MODE == APP_MODE_TEST_GPS) {
     const GPSData& d = _gps.getData();
-    Serial.printf("[TEST_GPS] fix=%d stream=%d chars=%lu lat=%.6f lon=%.6f sats=%lu\n",
+    Serial.printf("[TEST_GPS] fix=%d stream=%d chars=%lu lat=%.6f "
+                  "lon=%.6f sats=%lu hdop=%.2f\n",
                   d.valid, d.streamSeen, static_cast<unsigned long>(d.charsProcessed),
-                  d.latitude, d.longitude, static_cast<unsigned long>(d.satellites));
+                  d.latitude, d.longitude,
+                  static_cast<unsigned long>(d.satellites), d.hdop);
   } else if (APP_MODE == APP_MODE_TEST_ADXL345) {
     const AccelData& d = _accel.getData();
     const float magnitudeRaw = magnitude3(d.rawX, d.rawY, d.rawZ);
@@ -121,8 +138,14 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
                   d.valid, d.x, d.y, d.z);
   } else if (APP_MODE == APP_MODE_TEST_BMP180) {
     const BarometerData& d = _barometer.getData();
-    Serial.printf("[TEST_BMP180] valid=%d pressure=%.2fhPa temp=%.2fC alt=%.2fm\n",
-                  d.valid, d.pressureHpa, d.temperatureC, d.altitudeM);
+    Serial.printf("[TEST_BMP180] valid=%d pressure_raw_hpa=%.2f "
+                  "pressure_local_hpa=%.2f sea_level_pressure_hpa=%.2f "
+                  "temperature_c=%.2f altitude_m=%.2f "
+                  "calibration_source=%s\n",
+                  d.valid, d.rawPressureHpa, d.pressureHpa,
+                  d.seaLevelPressureHpa, d.temperatureC, d.altitudeM,
+                  BarometerCalibrationStore::sourceName(
+                      d.calibrationSource));
   } else if (APP_MODE == APP_MODE_TEST_GY801) {
     const GY801Data& d = _gy801.getData();
     Serial.printf("[TEST_GY801] imu=%d accel=%d gyro=%d mag=%d baro=%d\n",

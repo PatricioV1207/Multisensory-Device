@@ -16,7 +16,7 @@ recibirlo o añadir NTP en una fase posterior.
 | Acelerómetro | `accel_x`, `accel_y`, `accel_z` | m/s² calibrados |
 | Giroscopio | `gyro_x`, `gyro_y`, `gyro_z` | rad/s |
 | Magnetómetro | `mag_x`, `mag_y`, `mag_z` | µT |
-| Barómetro | `pressure_hpa`, `baro_temperature_c`, `baro_altitude_m` | hPa, °C, m |
+| Barómetro | `pressure_hpa`, `sea_level_pressure_hpa`, `baro_temperature_c`, `baro_altitude_m` | hPa, °C, m |
 
 Las banderas `dht_valid`, `gps_valid`, `accel_valid`, `gyro_valid`,
 `mag_valid`, `baro_valid` e `imu_valid` siempre aparecen. `imu_valid` exige
@@ -25,6 +25,16 @@ acelerómetro, giroscopio y magnetómetro válidos; no depende del barómetro.
 Los campos `accel_x`, `accel_y` y `accel_z` corresponden a la lectura calibrada
 del ADXL345. La lectura raw se conserva internamente para diagnóstico y aparece
 en `test_adxl345`, pero no se publica en el payload MQTT.
+
+`pressure_hpa` es la presión local corregida por
+`BARO_PRESSURE_OFFSET_HPA`. `sea_level_pressure_hpa` es la referencia
+normalizada que se utiliza para calcular `baro_altitude_m`; puede proceder del
+fallback de configuración o de una calibración guardada en NVS. La presión raw
+del BMP180 se conserva para `test_bmp180`, pero no se publica por MQTT.
+
+La presión local y la presión a nivel del mar no son intercambiables. Una
+aplicación meteorológica suele mostrar presión reducida al nivel del mar y no
+debe utilizarse directamente para calcular el offset físico del sensor.
 
 ## Fallos parciales
 

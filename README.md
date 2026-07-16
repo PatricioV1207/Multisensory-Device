@@ -27,6 +27,8 @@ módulos del sistema final.
 datos independientes; `TelemetryValidator` comprueba vigencia y rango;
 `TelemetryBuilder` serializa únicamente valores válidos; y
 `MQTTClientCustom` publica usando un transporte `Client` intercambiable.
+La referencia del BMP180 puede calibrarse con una altitud conocida o con un fix
+GPS controlado y persistirse en NVS.
 
 Consulta [docs/architecture.md](docs/architecture.md) para el flujo completo.
 
@@ -72,8 +74,9 @@ Los environments disponibles son:
 ```text
 test_dht11         test_gps           test_i2c_scanner
 test_adxl345       test_l3g4200d      test_hmc5883l
-test_bmp180        test_gy801         test_wifi
-test_mqtt_wifi     test_payload_json  full_prototype
+test_bmp180        calibrate_bmp180   test_gy801
+test_wifi          test_mqtt_wifi     test_payload_json
+test_barometer_math                    full_prototype
 ```
 
 Los comandos y criterios PASS/FAIL se encuentran en
@@ -83,6 +86,7 @@ Los comandos y criterios PASS/FAIL se encuentran en
 
 - Arquitectura y drivers implementados.
 - Verificación por dirección e ID para los cuatro chips GY-801.
+- Calibración persistente del BMP180 con altitud conocida o GPS.
 - Payload parcial, reconexión WiFi/MQTT y pruebas Unity implementados.
 - Pendiente: validación con el hardware físico, calibración del magnetómetro y
   configuración de un dispositivo real en ThingsBoard.
@@ -94,5 +98,4 @@ Los comandos y criterios PASS/FAIL se encuentran en
 - Cola persistente y logging en microSD.
 - Transporte móvil SIM7600/SIM800L mediante otro `Client`.
 - Sensores ambientales, luz y ruido adicionales.
-- Calibración persistente y fusión de orientación roll/pitch/yaw.
-
+- Fusión de orientación roll/pitch/yaw.

@@ -29,6 +29,9 @@ void GPSNeo6M::update(uint32_t nowMs) {
   if (_gps.satellites.isValid()) {
     _data.satellites = _gps.satellites.value();
   }
+  if (_gps.hdop.isValid()) {
+    _data.hdop = _gps.hdop.hdop();
+  }
 
   const bool freshFix = _gps.location.isValid() && _gps.altitude.isValid() &&
                         _gps.speed.isValid() &&

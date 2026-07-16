@@ -20,6 +20,7 @@ struct GPSData {
   bool streamSeen = false;
   uint32_t charsProcessed = 0;
   uint32_t updatedAtMs = 0;
+  float hdop = NAN;
 };
 
 struct AccelData {
@@ -49,12 +50,22 @@ struct MagData {
   uint32_t updatedAtMs = 0;
 };
 
+enum class BarometerCalibrationSource : uint8_t {
+  Default = 0,
+  KnownAltitude = 1,
+  GPS = 2,
+};
+
 struct BarometerData {
   float pressureHpa = NAN;
   float temperatureC = NAN;
   float altitudeM = NAN;
   bool valid = false;
   uint32_t updatedAtMs = 0;
+  float rawPressureHpa = NAN;
+  float seaLevelPressureHpa = NAN;
+  BarometerCalibrationSource calibrationSource =
+      BarometerCalibrationSource::Default;
 };
 
 struct GY801Data {

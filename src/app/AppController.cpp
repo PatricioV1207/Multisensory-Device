@@ -2,6 +2,7 @@
 
 #include <Wire.h>
 #include <esp_timer.h>
+#include "calibration/BarometerCalibrationStore.h"
 #include "config.h"
 #include "pins.h"
 #include "telemetry/TelemetryBuilder.h"
@@ -22,7 +23,17 @@ void AppController::begin() {
   Wire.setTimeOut(I2C_TIMEOUT_MS);
   _dht.begin();
   _gps.begin();
+  const StoredBarometerCalibration barometerCalibration =
+      BarometerCalibrationStore::load();
+  _gy801.setBarometerCalibration(
+      barometerCalibration.seaLevelPressureHpa, BARO_PRESSURE_OFFSET_HPA,
+      barometerCalibration.source);
   _gy801.begin();
+  Logger::info(
+      "BARO",
+      "Reference p0=" + String(barometerCalibration.seaLevelPressureHpa, 3) +
+          " hPa source=" +
+          BarometerCalibrationStore::sourceName(barometerCalibration.source));
   _wifi.begin();
   _mqtt.begin(_wifiClient);
   Logger::info("BOOT", "Initialization complete; failures are non-fatal");
@@ -77,4 +88,3 @@ void AppController::publishTelemetry(uint32_t nowMs) {
     Logger::info("MQTT", "Telemetry published");
   }
 }
-

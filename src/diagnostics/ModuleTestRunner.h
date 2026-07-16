@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <WiFiClient.h>
+#include "diagnostics/BarometerCalibrationRunner.h"
 #include "communication/MQTTClientCustom.h"
 #include "communication/WiFiManagerCustom.h"
 #include "sensors/DHT11Sensor.h"
@@ -32,8 +33,8 @@ class ModuleTestRunner {
   WiFiManagerCustom _wifi;
   WiFiClient _wifiClient;
   MQTTClientCustom _mqtt;
+  BarometerCalibrationRunner _barometerCalibrationRunner;
   uint32_t _lastOutputMs = 0;
   uint32_t _lastScanMs = 0;
   uint32_t _lastPublishMs = 0;
 };
-

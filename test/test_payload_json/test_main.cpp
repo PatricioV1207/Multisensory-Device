@@ -14,6 +14,8 @@ TelemetryData completeSample() {
   data.gy801.gyro = {0.1F, 0.2F, 0.3F, true, 1000};
   data.gy801.mag = {12.5F, 10.8F, 8.4F, true, 1000};
   data.gy801.barometer = {1012.8F, 28.1F, 4.2F, true, 1000};
+  data.gy801.barometer.rawPressureHpa = 1012.8F;
+  data.gy801.barometer.seaLevelPressureHpa = 1013.3F;
   data.gy801.imuValid = true;
   return data;
 }
@@ -33,6 +35,9 @@ void test_complete_payload_contains_expected_fields() {
   TEST_ASSERT_FLOAT_WITHIN(0.001F, 25.4F, doc["temperature_c"].as<float>());
   TEST_ASSERT_FLOAT_WITHIN(0.001F, 9.81F, doc["accel_z"].as<float>());
   TEST_ASSERT_FLOAT_WITHIN(0.001F, 1012.8F, doc["pressure_hpa"].as<float>());
+  TEST_ASSERT_FLOAT_WITHIN(0.001F, 1013.3F,
+                           doc["sea_level_pressure_hpa"].as<float>());
+  TEST_ASSERT_FALSE(doc["pressure_raw_hpa"].is<float>());
 }
 
 void test_invalid_measurements_are_omitted_but_flags_remain() {

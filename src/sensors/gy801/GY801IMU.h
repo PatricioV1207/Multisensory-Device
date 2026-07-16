@@ -13,6 +13,9 @@ class GY801IMU {
   void update(uint32_t nowMs);
   bool isValid() const;
   const GY801Data& getData() const;
+  bool setBarometerCalibration(float seaLevelPressureHpa,
+                               float pressureOffsetHpa,
+                               BarometerCalibrationSource source);
 
  private:
   void refreshData();
@@ -23,4 +26,3 @@ class GY801IMU {
   BMP180Barometer _barometer;
   GY801Data _data;
 };
-

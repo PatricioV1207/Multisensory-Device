@@ -11,6 +11,8 @@ TelemetryData validSample() {
   data.gy801.gyro = {0.0F, 0.0F, 0.0F, true, 9900};
   data.gy801.mag = {10.0F, 20.0F, 30.0F, true, 9900};
   data.gy801.barometer = {1013.25F, 25.0F, 0.0F, true, 9900};
+  data.gy801.barometer.rawPressureHpa = 1013.25F;
+  data.gy801.barometer.seaLevelPressureHpa = 1013.25F;
   return data;
 }
 
@@ -52,4 +54,3 @@ int main(int, char**) {
   RUN_TEST(test_stale_and_out_of_range_values_are_invalidated);
   return UNITY_END();
 }
-

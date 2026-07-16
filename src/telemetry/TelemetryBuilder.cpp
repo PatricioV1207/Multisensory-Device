@@ -67,9 +67,12 @@ bool TelemetryBuilder::build(const TelemetryData& data, char* output,
 
   if (data.gy801.barometer.valid &&
       std::isfinite(data.gy801.barometer.pressureHpa) &&
+      std::isfinite(data.gy801.barometer.seaLevelPressureHpa) &&
       std::isfinite(data.gy801.barometer.temperatureC) &&
       std::isfinite(data.gy801.barometer.altitudeM)) {
     doc["pressure_hpa"] = data.gy801.barometer.pressureHpa;
+    doc[TelemetrySchema::SEA_LEVEL_PRESSURE_HPA] =
+        data.gy801.barometer.seaLevelPressureHpa;
     doc["baro_temperature_c"] = data.gy801.barometer.temperatureC;
     doc["baro_altitude_m"] = data.gy801.barometer.altitudeM;
   }
@@ -90,4 +93,3 @@ bool TelemetryBuilder::build(const TelemetryData& data, char* output,
   }
   return true;
 }
-

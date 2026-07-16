@@ -49,14 +49,23 @@ void TelemetryValidator::validate(TelemetryData& data, uint32_t nowMs) {
 
   data.gy801.barometer.valid = data.gy801.barometer.valid &&
                                isFresh(nowMs, data.gy801.barometer.updatedAtMs,
-                                       DHT_READ_INTERVAL_MS * 2UL) &&
+                                       BARO_READ_INTERVAL_MS * 2UL) &&
+                               std::isfinite(
+                                   data.gy801.barometer.rawPressureHpa) &&
                                std::isfinite(data.gy801.barometer.pressureHpa) &&
+                               std::isfinite(
+                                   data.gy801.barometer.seaLevelPressureHpa) &&
                                std::isfinite(data.gy801.barometer.temperatureC) &&
                                std::isfinite(data.gy801.barometer.altitudeM) &&
+                               data.gy801.barometer.rawPressureHpa >= 300.0F &&
+                               data.gy801.barometer.rawPressureHpa <= 1100.0F &&
                                data.gy801.barometer.pressureHpa >= 300.0F &&
-                               data.gy801.barometer.pressureHpa <= 1100.0F;
+                               data.gy801.barometer.pressureHpa <= 1100.0F &&
+                               data.gy801.barometer.seaLevelPressureHpa >=
+                                   800.0F &&
+                               data.gy801.barometer.seaLevelPressureHpa <=
+                                   1100.0F;
 
   data.gy801.imuValid = data.gy801.accel.valid && data.gy801.gyro.valid &&
                         data.gy801.mag.valid;
 }
-

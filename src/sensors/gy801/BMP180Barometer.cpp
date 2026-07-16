@@ -2,6 +2,7 @@
 
 #include <Wire.h>
 #include <cmath>
+#include "calibration/BarometerMath.h"
 #include "config.h"
 #include "utils/Logger.h"
 
@@ -19,6 +20,14 @@ bool readRegister(uint8_t address, uint8_t reg, uint8_t& value) {
   return true;
 }
 }  // namespace
+
+BMP180Barometer::BMP180Barometer()
+    : _seaLevelPressureHpa(BARO_DEFAULT_SEA_LEVEL_PRESSURE_HPA),
+      _pressureOffsetHpa(BARO_PRESSURE_OFFSET_HPA),
+      _calibrationSource(BarometerCalibrationSource::Default) {
+  _data.seaLevelPressureHpa = _seaLevelPressureHpa;
+  _data.calibrationSource = _calibrationSource;
+}
 
 bool BMP180Barometer::probe() const {
   uint8_t id = 0;
@@ -49,7 +58,7 @@ void BMP180Barometer::update(uint32_t nowMs) {
     }
     return;
   }
-  if (static_cast<uint32_t>(nowMs - _lastReadMs) < DHT_READ_INTERVAL_MS) {
+  if (static_cast<uint32_t>(nowMs - _lastReadMs) < BARO_READ_INTERVAL_MS) {
     return;
   }
   _lastReadMs = nowMs;
@@ -72,12 +81,17 @@ void BMP180Barometer::update(uint32_t nowMs) {
     return;
   }
 
-  _data.pressureHpa = event.pressure;
+  _data.rawPressureHpa = event.pressure;
+  _data.pressureHpa = BarometerMath::applyPressureOffset(
+      _data.rawPressureHpa, _pressureOffsetHpa);
   _data.temperatureC = temperature;
-  _data.altitudeM = _sensor.pressureToAltitude(SEA_LEVEL_PRESSURE_HPA,
-                                               event.pressure, temperature);
+  _data.seaLevelPressureHpa = _seaLevelPressureHpa;
+  _data.calibrationSource = _calibrationSource;
+  _data.altitudeM = BarometerMath::altitudeFromPressure(
+      _data.pressureHpa, _data.seaLevelPressureHpa);
   _data.updatedAtMs = nowMs;
-  _data.valid = std::isfinite(_data.altitudeM);
+  _data.valid = std::isfinite(_data.pressureHpa) &&
+                std::isfinite(_data.altitudeM);
 }
 
 bool BMP180Barometer::isValid() const {
@@ -86,4 +100,28 @@ bool BMP180Barometer::isValid() const {
 
 const BarometerData& BMP180Barometer::getData() const {
   return _data;
+}
+
+bool BMP180Barometer::setCalibration(float seaLevelPressureHpa,
+                                    float pressureOffsetHpa,
+                                    BarometerCalibrationSource source) {
+  if (!BarometerMath::isValidSeaLevelPressure(seaLevelPressureHpa) ||
+      !std::isfinite(pressureOffsetHpa)) {
+    return false;
+  }
+  _seaLevelPressureHpa = seaLevelPressureHpa;
+  _pressureOffsetHpa = pressureOffsetHpa;
+  _calibrationSource = source;
+  _data.seaLevelPressureHpa = seaLevelPressureHpa;
+  _data.calibrationSource = source;
+  if (std::isfinite(_data.rawPressureHpa)) {
+    _data.pressureHpa = BarometerMath::applyPressureOffset(
+        _data.rawPressureHpa, _pressureOffsetHpa);
+    _data.altitudeM = BarometerMath::altitudeFromPressure(
+        _data.pressureHpa, _seaLevelPressureHpa);
+    _data.valid = std::isfinite(_data.pressureHpa) &&
+                  std::isfinite(_data.altitudeM) &&
+                  std::isfinite(_data.temperatureC);
+  }
+  return true;
 }

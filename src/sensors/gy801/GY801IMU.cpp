@@ -38,3 +38,11 @@ const GY801Data& GY801IMU::getData() const {
   return _data;
 }
 
+bool GY801IMU::setBarometerCalibration(
+    float seaLevelPressureHpa, float pressureOffsetHpa,
+    BarometerCalibrationSource source) {
+  const bool configured = _barometer.setCalibration(
+      seaLevelPressureHpa, pressureOffsetHpa, source);
+  refreshData();
+  return configured;
+}
