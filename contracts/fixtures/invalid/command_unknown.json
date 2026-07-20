@@ -1,0 +1,12 @@
+{
+  "_contract": "command-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "command",
+  "command_id": "cmd-20260720-bad",
+  "device_id": "sim-device-bad",
+  "vehicle_id": "sim-vehicle-bad",
+  "command": "erase_everything",
+  "issued_at": "2026-07-20T23:18:51Z",
+  "expires_at": "2026-07-20T23:23:51Z",
+  "parameters": {}
+}

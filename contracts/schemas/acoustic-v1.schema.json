@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vehiclesense.local/schemas/acoustic-v1.schema.json",
+  "title": "VehicleSense acoustic aggregate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "message_type", "device_id", "vehicle_id", "boot_id",
+    "sequence", "sample_id", "uptime_ms", "time_valid", "replayed",
+    "simulated", "mic_valid", "analysis_valid"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "message_type": { "const": "acoustic" },
+    "device_id": { "$ref": "#/$defs/id" },
+    "vehicle_id": { "$ref": "#/$defs/id" },
+    "boot_id": { "$ref": "#/$defs/counter" },
+    "sequence": { "$ref": "#/$defs/counter" },
+    "sample_id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+:[0-9]+:[0-9]+:acoustic$", "maxLength": 170 },
+    "uptime_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "time_valid": { "type": "boolean" },
+    "measured_at": { "type": "string", "format": "date-time" },
+    "replayed": { "type": "boolean" },
+    "simulated": { "type": "boolean" },
+    "mic_valid": { "type": "boolean" },
+    "analysis_valid": { "type": "boolean" },
+    "window_duration_ms": { "type": "integer", "minimum": 100, "maximum": 10000 },
+    "sample_rate_hz": { "type": "integer", "minimum": 8000, "maximum": 48000 },
+    "relative_level_dbfs": { "type": "number", "minimum": -160, "maximum": 0 },
+    "peak_dbfs": { "type": "number", "minimum": -160, "maximum": 0 },
+    "clipping": { "type": "boolean" },
+    "clipping_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+    "crest_factor": { "type": "number", "minimum": 0, "maximum": 100 },
+    "zero_crossing_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+    "spectral_centroid_hz": { "type": "number", "minimum": 0, "maximum": 24000 },
+    "spectral_flatness": { "type": "number", "minimum": 0, "maximum": 1 },
+    "spectral_rolloff_hz": { "type": "number", "minimum": 0, "maximum": 24000 },
+    "band_energy_ratio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hz_80_250", "hz_250_800", "hz_800_2000", "hz_2000_4000", "hz_4000_8000"],
+      "properties": {
+        "hz_80_250": { "$ref": "#/$defs/ratio" },
+        "hz_250_800": { "$ref": "#/$defs/ratio" },
+        "hz_800_2000": { "$ref": "#/$defs/ratio" },
+        "hz_2000_4000": { "$ref": "#/$defs/ratio" },
+        "hz_4000_8000": { "$ref": "#/$defs/ratio" }
+      }
+    },
+    "category": { "$ref": "#/$defs/category" },
+    "confidence": { "$ref": "#/$defs/ratio" },
+    "classifier_version": { "type": "string", "minLength": 1, "maxLength": 40 }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$" },
+    "counter": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+    "category": { "enum": ["traffic", "music", "speech", "engine", "horn", "siren", "wind", "quiet", "unknown"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "time_valid": { "const": true } }, "required": ["time_valid"] },
+      "then": { "required": ["measured_at"] },
+      "else": { "not": { "required": ["measured_at"] } }
+    },
+    {
+      "if": { "properties": { "analysis_valid": { "const": true } }, "required": ["analysis_valid"] },
+      "then": {
+        "properties": { "mic_valid": { "const": true } },
+        "required": [
+          "window_duration_ms", "sample_rate_hz", "relative_level_dbfs", "peak_dbfs",
+          "clipping", "clipping_ratio", "crest_factor", "zero_crossing_rate",
+          "spectral_centroid_hz", "spectral_flatness", "spectral_rolloff_hz",
+          "band_energy_ratio", "category", "confidence", "classifier_version"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["relative_level_dbfs"] }, { "required": ["peak_dbfs"] },
+            { "required": ["category"] }, { "required": ["confidence"] }
+          ]
+        }
+      }
+    }
+  ]
+}

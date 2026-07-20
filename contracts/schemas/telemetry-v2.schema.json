@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vehiclesense.local/schemas/telemetry-v2.schema.json",
+  "title": "Legacy ESP32 telemetry v2",
+  "description": "Exact flat contract emitted by the firmware before VehicleSense schema v3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "device_id", "uptime_ms", "dht_valid", "gps_valid",
+    "accel_valid", "gyro_valid", "mag_valid", "baro_valid", "imu_valid",
+    "bh1750_valid", "sd_valid", "sim_valid", "gprs_connected"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "device_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "uptime_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "dht_valid": { "type": "boolean" },
+    "temperature_c": { "type": "number", "minimum": -40, "maximum": 85 },
+    "humidity_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "gps_valid": { "type": "boolean" },
+    "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+    "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+    "altitude_m": { "type": "number", "minimum": -500, "maximum": 20000 },
+    "speed_kmh": { "type": "number", "minimum": 0, "maximum": 500 },
+    "satellites": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "accel_valid": { "type": "boolean" },
+    "accel_x": { "type": "number", "minimum": -200, "maximum": 200 },
+    "accel_y": { "type": "number", "minimum": -200, "maximum": 200 },
+    "accel_z": { "type": "number", "minimum": -200, "maximum": 200 },
+    "gyro_valid": { "type": "boolean" },
+    "gyro_x": { "type": "number", "minimum": -100, "maximum": 100 },
+    "gyro_y": { "type": "number", "minimum": -100, "maximum": 100 },
+    "gyro_z": { "type": "number", "minimum": -100, "maximum": 100 },
+    "mag_valid": { "type": "boolean" },
+    "mag_x": { "type": "number", "minimum": -5000, "maximum": 5000 },
+    "mag_y": { "type": "number", "minimum": -5000, "maximum": 5000 },
+    "mag_z": { "type": "number", "minimum": -5000, "maximum": 5000 },
+    "baro_valid": { "type": "boolean" },
+    "pressure_hpa": { "type": "number", "minimum": 300, "maximum": 1100 },
+    "sea_level_pressure_hpa": { "type": "number", "minimum": 800, "maximum": 1100 },
+    "baro_temperature_c": { "type": "number", "minimum": -40, "maximum": 85 },
+    "baro_altitude_m": { "type": "number", "minimum": -500, "maximum": 20000 },
+    "imu_valid": { "type": "boolean" },
+    "bh1750_valid": { "type": "boolean" },
+    "light_lux": { "type": "number", "minimum": 0, "maximum": 200000 },
+    "sd_valid": { "type": "boolean" },
+    "sim_valid": { "type": "boolean" },
+    "gprs_connected": { "type": "boolean" },
+    "gsm_csq": { "type": "integer", "minimum": 0, "maximum": 31 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "dht_valid": { "const": false } }, "required": ["dht_valid"] },
+      "then": { "not": { "anyOf": [{ "required": ["temperature_c"] }, { "required": ["humidity_percent"] }] } }
+    },
+    {
+      "if": { "properties": { "gps_valid": { "const": false } }, "required": ["gps_valid"] },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["latitude"] }, { "required": ["longitude"] },
+            { "required": ["altitude_m"] }, { "required": ["speed_kmh"] },
+            { "required": ["satellites"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": { "properties": { "bh1750_valid": { "const": false } }, "required": ["bh1750_valid"] },
+      "then": { "not": { "required": ["light_lux"] } }
+    }
+  ]
+}

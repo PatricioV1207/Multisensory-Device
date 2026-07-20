@@ -1,0 +1,15 @@
+{
+  "_contract": "command-ack-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "command_ack",
+  "command_id": "cmd-20260720-0001",
+  "device_id": "sim-device-001",
+  "vehicle_id": "sim-vehicle-001",
+  "state": "completed",
+  "uptime_ms": 421000,
+  "time_valid": true,
+  "acknowledged_at": "2026-07-20T23:18:52Z",
+  "message": "Status publication queued",
+  "result": {},
+  "simulated": true
+}

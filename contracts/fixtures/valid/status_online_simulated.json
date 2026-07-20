@@ -1,0 +1,17 @@
+{
+  "_contract": "status-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "status",
+  "device_id": "sim-device-001",
+  "vehicle_id": "sim-vehicle-001",
+  "boot_id": 7,
+  "state": "online",
+  "reason": "connected",
+  "firmware_version": "0.3.0-dev",
+  "uptime_ms": 12000,
+  "time_valid": true,
+  "observed_at": "2026-07-20T23:18:51Z",
+  "wifi_rssi_dbm": -58,
+  "ip_address": "192.168.1.42",
+  "simulated": true
+}

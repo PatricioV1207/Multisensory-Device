@@ -1,0 +1,13 @@
+{
+  "_contract": "command-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "command",
+  "command_id": "cmd-20260720-0001",
+  "device_id": "sim-device-001",
+  "vehicle_id": "sim-vehicle-001",
+  "command": "publish_status",
+  "issued_at": "2026-07-20T23:18:51Z",
+  "expires_at": "2026-07-20T23:23:51Z",
+  "parameters": {},
+  "requested_by": "operator@example.test"
+}

@@ -1,0 +1,12 @@
+{
+  "_contract": "command-ack-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "command_ack",
+  "command_id": "cmd-20260720-bad",
+  "device_id": "sim-device-bad",
+  "vehicle_id": "sim-vehicle-bad",
+  "state": "failed",
+  "uptime_ms": 100,
+  "time_valid": false,
+  "simulated": true
+}

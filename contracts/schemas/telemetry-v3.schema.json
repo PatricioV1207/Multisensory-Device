@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vehiclesense.local/schemas/telemetry-v3.schema.json",
+  "title": "VehicleSense telemetry v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "device_id",
+    "vehicle_id",
+    "boot_id",
+    "sequence",
+    "sample_id",
+    "uptime_ms",
+    "time_valid",
+    "replayed",
+    "simulated",
+    "dht_valid",
+    "gps_valid",
+    "accel_valid",
+    "gyro_valid",
+    "mag_valid",
+    "baro_valid",
+    "imu_valid",
+    "bh1750_valid",
+    "sd_valid",
+    "wifi_connected",
+    "mqtt_connected",
+    "mic_valid",
+    "acoustic_valid"
+  ],
+  "properties": {
+    "schema_version": { "const": 3 },
+    "message_type": { "const": "telemetry" },
+    "device_id": { "$ref": "#/$defs/id" },
+    "vehicle_id": { "$ref": "#/$defs/id" },
+    "boot_id": { "$ref": "#/$defs/counter" },
+    "sequence": { "$ref": "#/$defs/counter" },
+    "sample_id": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9._-]+:[0-9]+:[0-9]+$"
+    },
+    "uptime_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "time_valid": { "type": "boolean" },
+    "measured_at": { "type": "string", "format": "date-time" },
+    "replayed": { "type": "boolean" },
+    "simulated": { "type": "boolean" },
+
+    "dht_valid": { "type": "boolean" },
+    "temperature_c": { "type": "number", "minimum": -40, "maximum": 85 },
+    "humidity_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+
+    "gps_valid": { "type": "boolean" },
+    "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+    "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+    "altitude_m": { "type": "number", "minimum": -500, "maximum": 20000 },
+    "speed_kmh": { "type": "number", "minimum": 0, "maximum": 500 },
+    "satellites": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "gps_hdop": { "type": "number", "minimum": 0, "maximum": 99.9 },
+
+    "accel_valid": { "type": "boolean" },
+    "accel_x": { "$ref": "#/$defs/acceleration" },
+    "accel_y": { "$ref": "#/$defs/acceleration" },
+    "accel_z": { "$ref": "#/$defs/acceleration" },
+    "gyro_valid": { "type": "boolean" },
+    "gyro_x": { "$ref": "#/$defs/angularVelocity" },
+    "gyro_y": { "$ref": "#/$defs/angularVelocity" },
+    "gyro_z": { "$ref": "#/$defs/angularVelocity" },
+    "mag_valid": { "type": "boolean" },
+    "mag_x": { "$ref": "#/$defs/magneticField" },
+    "mag_y": { "$ref": "#/$defs/magneticField" },
+    "mag_z": { "$ref": "#/$defs/magneticField" },
+    "imu_valid": { "type": "boolean" },
+
+    "baro_valid": { "type": "boolean" },
+    "pressure_hpa": { "type": "number", "minimum": 300, "maximum": 1100 },
+    "sea_level_pressure_hpa": { "type": "number", "minimum": 800, "maximum": 1100 },
+    "baro_temperature_c": { "type": "number", "minimum": -40, "maximum": 85 },
+    "baro_altitude_m": { "type": "number", "minimum": -500, "maximum": 20000 },
+
+    "bh1750_valid": { "type": "boolean" },
+    "light_lux": { "type": "number", "minimum": 0, "maximum": 200000 },
+
+    "sd_valid": { "type": "boolean" },
+    "offline_queued": { "type": "integer", "minimum": 0 },
+    "offline_replayed": { "type": "integer", "minimum": 0 },
+    "offline_dropped": { "type": "integer", "minimum": 0 },
+    "offline_oldest_age_s": { "type": "integer", "minimum": 0 },
+
+    "wifi_connected": { "type": "boolean" },
+    "wifi_rssi_dbm": { "type": "integer", "minimum": -127, "maximum": 0 },
+    "mqtt_connected": { "type": "boolean" },
+
+    "mic_valid": { "type": "boolean" },
+    "acoustic_valid": { "type": "boolean" },
+    "acoustic_relative_level_dbfs": { "type": "number", "minimum": -160, "maximum": 0 },
+    "acoustic_peak_dbfs": { "type": "number", "minimum": -160, "maximum": 0 },
+    "acoustic_category": { "$ref": "#/$defs/acousticCategory" },
+    "acoustic_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "acoustic_clipping": { "type": "boolean" },
+    "acoustic_classifier_version": { "type": "string", "minLength": 1, "maxLength": 40 },
+
+    "sim_valid": { "type": "boolean" },
+    "gprs_connected": { "type": "boolean" },
+    "gsm_csq": { "type": "integer", "minimum": 0, "maximum": 31 }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "counter": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "acceleration": { "type": "number", "minimum": -200, "maximum": 200 },
+    "angularVelocity": { "type": "number", "minimum": -100, "maximum": 100 },
+    "magneticField": { "type": "number", "minimum": -5000, "maximum": 5000 },
+    "acousticCategory": {
+      "enum": ["traffic", "music", "speech", "engine", "horn", "siren", "wind", "quiet", "unknown"]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "time_valid": { "const": true } }, "required": ["time_valid"] },
+      "then": { "required": ["measured_at"] },
+      "else": { "not": { "required": ["measured_at"] } }
+    },
+    {
+      "if": { "properties": { "dht_valid": { "const": true } }, "required": ["dht_valid"] },
+      "then": { "required": ["temperature_c", "humidity_percent"] },
+      "else": { "not": { "anyOf": [{ "required": ["temperature_c"] }, { "required": ["humidity_percent"] }] } }
+    },
+    {
+      "if": { "properties": { "gps_valid": { "const": true } }, "required": ["gps_valid"] },
+      "then": { "required": ["latitude", "longitude", "altitude_m", "speed_kmh", "satellites", "gps_hdop"] },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["latitude"] }, { "required": ["longitude"] },
+            { "required": ["altitude_m"] }, { "required": ["speed_kmh"] },
+            { "required": ["satellites"] }, { "required": ["gps_hdop"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": { "properties": { "accel_valid": { "const": true } }, "required": ["accel_valid"] },
+      "then": { "required": ["accel_x", "accel_y", "accel_z"] },
+      "else": { "not": { "anyOf": [{ "required": ["accel_x"] }, { "required": ["accel_y"] }, { "required": ["accel_z"] }] } }
+    },
+    {
+      "if": { "properties": { "gyro_valid": { "const": true } }, "required": ["gyro_valid"] },
+      "then": { "required": ["gyro_x", "gyro_y", "gyro_z"] },
+      "else": { "not": { "anyOf": [{ "required": ["gyro_x"] }, { "required": ["gyro_y"] }, { "required": ["gyro_z"] }] } }
+    },
+    {
+      "if": { "properties": { "mag_valid": { "const": true } }, "required": ["mag_valid"] },
+      "then": { "required": ["mag_x", "mag_y", "mag_z"] },
+      "else": { "not": { "anyOf": [{ "required": ["mag_x"] }, { "required": ["mag_y"] }, { "required": ["mag_z"] }] } }
+    },
+    {
+      "if": { "properties": { "baro_valid": { "const": true } }, "required": ["baro_valid"] },
+      "then": { "required": ["pressure_hpa", "sea_level_pressure_hpa", "baro_temperature_c", "baro_altitude_m"] },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["pressure_hpa"] }, { "required": ["sea_level_pressure_hpa"] },
+            { "required": ["baro_temperature_c"] }, { "required": ["baro_altitude_m"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": { "properties": { "bh1750_valid": { "const": true } }, "required": ["bh1750_valid"] },
+      "then": { "required": ["light_lux"] },
+      "else": { "not": { "required": ["light_lux"] } }
+    },
+    {
+      "if": { "properties": { "wifi_connected": { "const": true } }, "required": ["wifi_connected"] },
+      "then": { "required": ["wifi_rssi_dbm"] },
+      "else": { "not": { "required": ["wifi_rssi_dbm"] } }
+    },
+    {
+      "if": { "properties": { "acoustic_valid": { "const": true } }, "required": ["acoustic_valid"] },
+      "then": {
+        "properties": { "mic_valid": { "const": true } },
+        "required": [
+          "acoustic_relative_level_dbfs", "acoustic_peak_dbfs", "acoustic_category",
+          "acoustic_confidence", "acoustic_clipping", "acoustic_classifier_version"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["acoustic_relative_level_dbfs"] }, { "required": ["acoustic_peak_dbfs"] },
+            { "required": ["acoustic_category"] }, { "required": ["acoustic_confidence"] },
+            { "required": ["acoustic_clipping"] }, { "required": ["acoustic_classifier_version"] }
+          ]
+        }
+      }
+    }
+  ]
+}

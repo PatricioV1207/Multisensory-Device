@@ -1,0 +1,11 @@
+{
+  "_contract": "status-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "status",
+  "device_id": "sim-device-001",
+  "vehicle_id": "sim-vehicle-001",
+  "boot_id": 7,
+  "state": "offline",
+  "reason": "unexpected_disconnect",
+  "simulated": true
+}

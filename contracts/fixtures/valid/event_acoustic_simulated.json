@@ -1,0 +1,21 @@
+{
+  "_contract": "event-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "event",
+  "event_id": "sim-device-001:7:42:traffic",
+  "device_id": "sim-device-001",
+  "vehicle_id": "sim-vehicle-001",
+  "event_type": "acoustic_traffic",
+  "severity": "medium",
+  "uptime_ms": 420000,
+  "time_valid": true,
+  "occurred_at": "2026-07-20T23:18:51Z",
+  "duration_ms": 8000,
+  "confidence": 0.78,
+  "details": {
+    "relative_level_dbfs": -31.8,
+    "clipping": false,
+    "classifier_version": "heuristic-1"
+  },
+  "simulated": true
+}

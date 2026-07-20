@@ -1,0 +1,11 @@
+{
+  "_contract": "status-v1.schema.json",
+  "schema_version": 1,
+  "message_type": "status",
+  "device_id": "sim-device-bad",
+  "vehicle_id": "sim-vehicle-bad",
+  "state": "offline",
+  "reason": "unexpected_disconnect",
+  "ip_address": "192.168.1.2",
+  "simulated": true
+}

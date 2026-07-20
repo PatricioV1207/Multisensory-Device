@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vehiclesense.local/schemas/command-ack-v1.schema.json",
+  "title": "VehicleSense command acknowledgement v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "message_type", "command_id", "device_id", "vehicle_id",
+    "state", "uptime_ms", "time_valid", "simulated"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "message_type": { "const": "command_ack" },
+    "command_id": { "type": "string", "minLength": 8, "maxLength": 80, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "device_id": { "$ref": "#/$defs/id" },
+    "vehicle_id": { "$ref": "#/$defs/id" },
+    "state": { "enum": ["accepted", "rejected", "completed", "failed", "expired", "unsupported"] },
+    "uptime_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "time_valid": { "type": "boolean" },
+    "acknowledged_at": { "type": "string", "format": "date-time" },
+    "error_code": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Z0-9_]+$" },
+    "message": { "type": "string", "maxLength": 200 },
+    "result": { "type": "object", "maxProperties": 20 },
+    "simulated": { "type": "boolean" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "time_valid": { "const": true } }, "required": ["time_valid"] },
+      "then": { "required": ["acknowledged_at"] },
+      "else": { "not": { "required": ["acknowledged_at"] } }
+    },
+    {
+      "if": { "properties": { "state": { "enum": ["rejected", "failed", "unsupported"] } }, "required": ["state"] },
+      "then": { "required": ["error_code"] },
+      "else": {}
+    }
+  ]
+}

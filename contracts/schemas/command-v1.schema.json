@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vehiclesense.local/schemas/command-v1.schema.json",
+  "title": "VehicleSense command v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "message_type", "command_id", "device_id", "vehicle_id",
+    "command", "issued_at", "expires_at", "parameters"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "message_type": { "const": "command" },
+    "command_id": { "$ref": "#/$defs/commandId" },
+    "device_id": { "$ref": "#/$defs/id" },
+    "vehicle_id": { "$ref": "#/$defs/id" },
+    "command": {
+      "enum": [
+        "publish_status", "publish_telemetry", "set_telemetry_interval",
+        "set_acoustic_thresholds", "start_acoustic_calibration", "stop_acoustic_calibration"
+      ]
+    },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "parameters": { "type": "object", "maxProperties": 20 },
+    "requested_by": { "type": "string", "minLength": 1, "maxLength": 80 }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$" },
+    "commandId": { "type": "string", "minLength": 8, "maxLength": 80, "pattern": "^[A-Za-z0-9._:-]+$" }
+  }
+}

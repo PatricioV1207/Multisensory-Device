@@ -1,18 +1,22 @@
-# Bus Electric IoT Monitor — Prototype
+# VehicleSense — plataforma de monitoreo vehicular
 
 ## Overview
 
-Firmware modular en PlatformIO para un prototipo de monitoreo multisensorial de
-buses eléctricos universitarios. Lee DHT11, GPS NEO-6M, GY-801 y BH1750;
-respalda telemetría en microSD y puede publicarla por MQTT sobre WiFi o por
-GPRS mediante SIM800L. El perfil celular ofrece además un dashboard local y
-actualización OTA desde el Access Point del ESP32.
+VehicleSense es una plataforma de monitoreo multisensorial para vehículos de
+propósito general. El repositorio contiene hoy el firmware modular PlatformIO
+del ESP32 y está evolucionando, por fases, hacia una solución integrada con
+HiveMQ Cloud, backend, PostgreSQL y aplicación web de flota.
+
+El firmware existente lee DHT11, GPS NEO-6M, GY-801 y BH1750; puede respaldar
+telemetría en microSD y publicarla por MQTT sobre WiFi. También conserva un
+perfil experimental SIM800L y una página local con OTA. La fase activa utilizará
+WiFi; el trabajo celular se preserva pero queda diferido.
 
 Los fallos son parciales: un sensor ausente no detiene el GPS, la red ni los
 demás componentes. Las mediciones inválidas se omiten del JSON y se conservan
 banderas de estado explícitas.
 
-## Hardware de esta fase
+## Hardware actual y ampliación prevista
 
 - ESP32 DevKit V1 / NodeMCU-32 de 30 pines.
 - DHT11.
@@ -22,9 +26,10 @@ banderas de estado explícitas.
 - Módulo microSD SPI.
 - SIM800L V2 con fuente independiente adecuada.
 - WiFi integrado del ESP32.
+- INMP441 I2S: planificado, todavía no conectado ni integrado.
 
-No se incluyen BME280, sensores de ruido, SIM7600 ni otros módulos del sistema
-final. El frontend cloud completo tampoco forma parte de esta fase.
+No se incluyen BME280, SIM7600, OBD-II ni mediciones de combustible o batería
+del vehículo. Los valores no disponibles no se sustituyen por cero.
 
 ## Arquitectura
 
@@ -39,6 +44,12 @@ GPS controlado y persistirse en NVS.
 `full_prototype_cellular` añade BH1750, microSD, AP/web/OTA y transporte
 SIM800L. En este último, cada payload se guarda primero en la tarjeta y se
 publica después si GPRS, TLS y MQTT están disponibles.
+
+La arquitectura objetivo mantiene el firmware en la raíz y añade componentes
+separados en `backend/`, `frontend/`, `simulator/` y `deploy/`. Los contratos
+versionados viven en [`contracts/`](contracts/README.md). La auditoría y la hoja
+de ruta completa están en
+[`docs/vehiclesense_implementation_plan.md`](docs/vehiclesense_implementation_plan.md).
 
 Consulta [docs/architecture.md](docs/architecture.md) para el flujo completo.
 
@@ -62,7 +73,7 @@ pio device monitor -b 115200
 
 La guía de conexiones está en [docs/wiring.md](docs/wiring.md).
 
-## Configuración de red, AP y MQTT
+## Configuración de red, AP y MQTT actual
 
 Copia `include/secrets_example.h` como `include/secrets.h` y reemplaza los
 valores de ejemplo. El archivo local está excluido de Git.
@@ -77,6 +88,11 @@ ThingsBoard usa normalmente:
 Un broker MQTT convencional puede usar usuario, contraseña y tópico propios.
 El perfil WiFi existente utiliza MQTT sin TLS y debe considerarse una
 configuración de laboratorio.
+
+El destino de producción será HiveMQ Cloud por MQTT/TLS 8883 con ACL por
+dispositivo, LWT, estado retenido y QoS 1. Esa migración todavía no está activa
+en el firmware. La estructura objetivo está especificada en
+[`contracts/mqtt-topics.md`](contracts/mqtt-topics.md).
 
 Para el perfil celular configura además APN, PIN opcional, broker TLS, Access
 Point y credenciales del administrador. El MQTT celular real requiere TLS de
@@ -114,16 +130,20 @@ Los comandos y criterios PASS/FAIL se encuentran en
 - Calibración persistente del BMP180 con altitud conocida o GPS.
 - Payload v2 parcial, reconexión y pruebas Unity implementados.
 - Respaldo JSONL, BH1750, estado celular, dashboard local y OTA implementados.
-- Pendiente: validar físicamente cobertura 2G y TLS/SNI del firmware concreto
-  del SIM800L, probar cortes de alimentación y configurar el broker cloud.
+- Auditoría VehicleSense completada: los 21 environments ESP32 compilan y las
+  13 pruebas nativas existentes pasan.
+- Contratos MQTT VehicleSense v1 y telemetría v3 definidos, manteniendo un
+  schema explícito para telemetría v2.
+- Pendiente: perfil WiFi seguro integrado, INMP441, backend, PostgreSQL,
+  frontend, simulador y despliegue.
 
 ## Roadmap
 
-- Sincronización NTP y timestamp Unix opcional.
-- Reenvío controlado del backlog almacenado en microSD.
-- Migración a SIM7600 si TLS/SNI del SIM800L no resulta viable.
-- Firma criptográfica y rollback automático de firmware OTA.
-- Frontend cloud con GPS, mapa, rutas, gráficas e historial según
-  [docs/cloud_architecture.md](docs/cloud_architecture.md).
-- Sensores ambientales y de ruido adicionales.
-- Fusión de orientación roll/pitch/yaw.
+- Perfil `vehiclesense_wifi` con AP+STA, NTP y MQTT/TLS hacia HiveMQ Cloud.
+- Cola offline acotada y replay idempotente desde microSD.
+- INMP441 con nivel relativo, características espectrales y clasificador
+  heurístico honesto preparado para un futuro dataset.
+- Backend FastAPI, PostgreSQL, REST/WebSocket, alertas y viajes.
+- Frontend VehicleSense con dashboard, mapa, detalle e históricos.
+- Simulador multivehículo y despliegue Docker/Nginx en Oracle Cloud.
+- Fase celular posterior; SIM800L permanece conservado.
