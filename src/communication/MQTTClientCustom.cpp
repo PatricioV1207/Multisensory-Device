@@ -1,6 +1,5 @@
 #include "communication/MQTTClientCustom.h"
 
-#include <WiFi.h>
 #include <cstring>
 #include "config.h"
 #include "utils/Logger.h"
@@ -17,15 +16,23 @@ bool reached(uint32_t nowMs, uint32_t deadlineMs) {
 }  // namespace
 
 bool MQTTClientCustom::begin(Client& networkClient) {
+  const MqttConnectionConfig connection{MQTT_HOST, MQTT_PORT, MQTT_USERNAME,
+                                        MQTT_PASSWORD, MQTT_TOPIC};
+  return begin(networkClient, connection);
+}
+
+bool MQTTClientCustom::begin(Client& networkClient,
+                             const MqttConnectionConfig& connection) {
   _networkClient = &networkClient;
-  _configured = hasRealValue(MQTT_HOST) && MQTT_PORT > 0 &&
-                hasRealValue(MQTT_TOPIC);
+  _connection = connection;
+  _configured = hasRealValue(_connection.host) && _connection.port > 0 &&
+                hasRealValue(_connection.topic);
   if (!_configured) {
     Logger::error("CONFIG", "MQTT host/topic missing in secrets.h");
     return false;
   }
   _client.setClient(networkClient);
-  _client.setServer(MQTT_HOST, MQTT_PORT);
+  _client.setServer(_connection.host, _connection.port);
   _client.setBufferSize(MQTT_BUFFER_SIZE);
   _client.setKeepAlive(MQTT_KEEPALIVE_SECONDS);
   _client.setSocketTimeout(MQTT_SOCKET_TIMEOUT_SECONDS);
@@ -77,10 +84,12 @@ bool MQTTClientCustom::connect() {
   snprintf(clientId, sizeof(clientId), "%s-%04X", DEVICE_ID,
            static_cast<unsigned int>(chipId & 0xFFFFU));
 
-  if (MQTT_USERNAME[0] == '\0') {
+  if (_connection.username == nullptr || _connection.username[0] == '\0') {
     return _client.connect(clientId);
   }
-  return _client.connect(clientId, MQTT_USERNAME, MQTT_PASSWORD);
+  return _client.connect(clientId, _connection.username,
+                         _connection.password == nullptr ? ""
+                                                         : _connection.password);
 }
 
 void MQTTClientCustom::increaseBackoff() {
@@ -96,7 +105,7 @@ bool MQTTClientCustom::publish(const char* payload) {
   if (!_client.connected() || payload == nullptr || payload[0] == '\0') {
     return false;
   }
-  const bool ok = _client.publish(MQTT_TOPIC, payload, false);
+  const bool ok = _client.publish(_connection.topic, payload, false);
   if (!ok) {
     Logger::warn("MQTT", "Publish rejected; verify packet buffer and broker");
   }

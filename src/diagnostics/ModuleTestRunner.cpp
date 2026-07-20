@@ -2,6 +2,7 @@
 
 #include <Wire.h>
 #include <cmath>
+#include <cstring>
 #include "calibration/BarometerCalibrationStore.h"
 #include "config.h"
 #include "pins.h"
@@ -13,6 +14,11 @@ namespace {
 float magnitude3(float x, float y, float z) {
   return std::sqrt((x * x) + (y * y) + (z * z));
 }
+
+bool hasRealValue(const char* value) {
+  return value != nullptr && value[0] != '\0' &&
+         strncmp(value, "YOUR_", 5) != 0;
+}
 }  // namespace
 
 bool ModuleTestRunner::usesI2C() const {
@@ -20,7 +26,8 @@ bool ModuleTestRunner::usesI2C() const {
          APP_MODE == APP_MODE_TEST_ADXL345 || APP_MODE == APP_MODE_TEST_L3G4200D ||
          APP_MODE == APP_MODE_TEST_HMC5883L || APP_MODE == APP_MODE_TEST_BMP180 ||
          APP_MODE == APP_MODE_TEST_GY801 ||
-         APP_MODE == APP_MODE_CALIBRATE_BMP180;
+         APP_MODE == APP_MODE_CALIBRATE_BMP180 ||
+         APP_MODE == APP_MODE_TEST_BH1750;
 }
 
 void ModuleTestRunner::begin() {
@@ -59,6 +66,31 @@ void ModuleTestRunner::begin() {
     _gy801.begin();
   } else if (APP_MODE == APP_MODE_CALIBRATE_BMP180) {
     _barometerCalibrationRunner.begin();
+  } else if (APP_MODE == APP_MODE_TEST_BH1750) {
+    _light.begin();
+  } else if (APP_MODE == APP_MODE_TEST_MICROSD) {
+    _storage.begin();
+  } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT) {
+    _modem.begin(SIM800LMode::AtOnly);
+  } else if (APP_MODE == APP_MODE_TEST_SIM800L_GPRS) {
+    _modem.begin(SIM800LMode::Gprs);
+  } else if (APP_MODE == APP_MODE_TEST_SIM800L_MQTT ||
+             APP_MODE == APP_MODE_TEST_SIM800L_MQTT_TLS) {
+    _modem.begin(SIM800LMode::Gprs);
+    const bool tls = APP_MODE == APP_MODE_TEST_SIM800L_MQTT_TLS;
+    const MqttConnectionConfig connection =
+        tls ? MqttConnectionConfig{CELLULAR_MQTT_HOST, CELLULAR_MQTT_PORT,
+                                   CELLULAR_MQTT_USERNAME,
+                                   CELLULAR_MQTT_PASSWORD,
+                                   CELLULAR_MQTT_TOPIC}
+            : MqttConnectionConfig{MQTT_TEST_HOST, MQTT_TEST_PORT,
+                                   MQTT_TEST_USERNAME, MQTT_TEST_PASSWORD,
+                                   MQTT_TEST_TOPIC};
+    _mqtt.begin(_modem.networkClient(tls), connection);
+  } else if (APP_MODE == APP_MODE_TEST_LOCAL_WEB ||
+             APP_MODE == APP_MODE_TEST_LOCAL_OTA) {
+    _web.begin();
+    updateLocalWebMock(millis());
   } else if (APP_MODE == APP_MODE_TEST_WIFI ||
              APP_MODE == APP_MODE_TEST_MQTT_WIFI) {
     _wifi.begin();
@@ -90,6 +122,52 @@ void ModuleTestRunner::update(uint32_t nowMs) {
     _gy801.update(nowMs);
   } else if (APP_MODE == APP_MODE_CALIBRATE_BMP180) {
     _barometerCalibrationRunner.update(nowMs);
+  } else if (APP_MODE == APP_MODE_TEST_BH1750) {
+    _light.update(nowMs);
+  } else if (APP_MODE == APP_MODE_TEST_MICROSD) {
+    _storage.update(nowMs);
+    if (_storage.isReady() &&
+        static_cast<uint32_t>(nowMs - _lastStorageTestMs) >=
+            TEST_OUTPUT_INTERVAL_MS) {
+      _lastStorageTestMs = nowMs;
+      char record[160];
+      const int count = snprintf(
+          record, sizeof(record),
+          "{\"schema_version\":2,\"diagnostic\":true,\"uptime_ms\":%lu}",
+          static_cast<unsigned long>(nowMs));
+      if (count > 0) {
+        _storage.appendJsonLine(record, static_cast<size_t>(count), nowMs);
+      }
+    }
+  } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT ||
+             APP_MODE == APP_MODE_TEST_SIM800L_GPRS) {
+    _modem.update(nowMs);
+    if (APP_MODE == APP_MODE_TEST_SIM800L_GPRS) {
+      if (!_modem.isGprsConnected()) {
+        _tcpTestAttempted = false;
+        _tcpTestOk = false;
+      } else if (hasRealValue(MQTT_TEST_HOST) && MQTT_TEST_PORT > 0 &&
+                 (!_tcpTestAttempted ||
+                  static_cast<uint32_t>(nowMs - _lastTcpTestMs) >=
+                      SIM800_TCP_TEST_INTERVAL_MS)) {
+        _lastTcpTestMs = nowMs;
+        _tcpTestAttempted = true;
+        Client& tcpClient = _modem.networkClient(false);
+        _tcpTestOk = tcpClient.connect(MQTT_TEST_HOST, MQTT_TEST_PORT) == 1;
+        tcpClient.stop();
+        Logger::info("SIM800", _tcpTestOk ? "TCP probe succeeded" :
+                                             "TCP probe failed");
+      }
+    }
+  } else if (APP_MODE == APP_MODE_TEST_SIM800L_MQTT ||
+             APP_MODE == APP_MODE_TEST_SIM800L_MQTT_TLS) {
+    _modem.update(nowMs);
+    _mqtt.update(nowMs, _modem.isGprsConnected());
+    publishMqttTest(nowMs);
+  } else if (APP_MODE == APP_MODE_TEST_LOCAL_WEB ||
+             APP_MODE == APP_MODE_TEST_LOCAL_OTA) {
+    updateLocalWebMock(nowMs);
+    _web.update(nowMs);
   } else if (APP_MODE == APP_MODE_TEST_WIFI ||
              APP_MODE == APP_MODE_TEST_MQTT_WIFI) {
     _wifi.update(nowMs);
@@ -151,6 +229,38 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
     Serial.printf("[TEST_GY801] imu=%d accel=%d gyro=%d mag=%d baro=%d\n",
                   d.imuValid, d.accel.valid, d.gyro.valid, d.mag.valid,
                   d.barometer.valid);
+  } else if (APP_MODE == APP_MODE_TEST_BH1750) {
+    const LightData& d = _light.getData();
+    Serial.printf("[TEST_BH1750] valid=%d light_lux=%.2f\n", d.valid,
+                  d.lux);
+  } else if (APP_MODE == APP_MODE_TEST_MICROSD) {
+    const StorageStatus& d = _storage.getStatus();
+    Serial.printf("[TEST_MICROSD] mounted=%d last_write_ok=%d "
+                  "boot=%lu segment=%u free_bytes=%llu\n",
+                  d.mounted, d.lastWriteOk,
+                  static_cast<unsigned long>(d.bootSession),
+                  static_cast<unsigned>(d.segment),
+                  static_cast<unsigned long long>(d.freeBytes));
+  } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT ||
+             APP_MODE == APP_MODE_TEST_SIM800L_GPRS ||
+             APP_MODE == APP_MODE_TEST_SIM800L_MQTT ||
+             APP_MODE == APP_MODE_TEST_SIM800L_MQTT_TLS) {
+    const CellularStatus& d = _modem.getStatus();
+    const int tcpStatus = APP_MODE == APP_MODE_TEST_SIM800L_GPRS
+                              ? (_tcpTestAttempted ? (_tcpTestOk ? 1 : 0) : -1)
+                              : -1;
+    Serial.printf("[TEST_SIM800L] modem=%d model=%s sim=%d network=%d "
+                  "gprs=%d operator=%s ip=%s csq=%d dbm=%d error=%d "
+                  "tcp=%d mqtt=%d state=%d\n",
+                  d.modemPresent, d.modemName, d.simReady, d.networkRegistered,
+                  d.gprsConnected, d.operatorName, d.localIp,
+                  d.signalQuality, d.signalDbm, d.lastError,
+                  tcpStatus, _mqtt.isConnected(), _mqtt.state());
+  } else if (APP_MODE == APP_MODE_TEST_LOCAL_WEB ||
+             APP_MODE == APP_MODE_TEST_LOCAL_OTA) {
+    Serial.printf("[TEST_LOCAL_WEB] running=%d ip=%s ota=%d\n",
+                  _web.isRunning(), _web.localIp().c_str(),
+                  _web.getOtaStatus().enabled);
   } else if (APP_MODE == APP_MODE_TEST_WIFI ||
              APP_MODE == APP_MODE_TEST_MQTT_WIFI) {
     Serial.printf("[TEST_NET] wifi=%d ip=%s rssi=%ld mqtt=%d state=%d\n",
@@ -165,14 +275,68 @@ void ModuleTestRunner::publishMqttTest(uint32_t nowMs) {
     return;
   }
   _lastPublishMs = nowMs;
-  TelemetryData sample;
-  sample.deviceId = DEVICE_ID;
-  sample.uptimeMs = nowMs;
-  char payload[TELEMETRY_PAYLOAD_BUFFER_SIZE];
-  if (!TelemetryBuilder::build(sample, payload, sizeof(payload))) {
-    Logger::error("JSON", "Could not build MQTT test payload");
+  char payload[256];
+  const char* transport =
+      APP_MODE == APP_MODE_TEST_SIM800L_MQTT_TLS ? "cellular_tls" :
+      (APP_MODE == APP_MODE_TEST_SIM800L_MQTT ? "cellular_tcp" : "wifi");
+  const int count = snprintf(
+      payload, sizeof(payload),
+      "{\"schema_version\":2,\"device_id\":\"%s\",\"diagnostic\":true,"
+      "\"transport\":\"%s\",\"uptime_ms\":%lu}",
+      DEVICE_ID, transport, static_cast<unsigned long>(nowMs));
+  if (count <= 0 || static_cast<size_t>(count) >= sizeof(payload)) {
+    Logger::error("JSON", "Could not build synthetic MQTT test payload");
     return;
   }
   Logger::info("MQTT", _mqtt.publish(payload) ? "Test payload published" :
                                                 "Test publish failed");
+}
+
+void ModuleTestRunner::updateLocalWebMock(uint32_t nowMs) {
+  _localWebData.deviceId = DEVICE_ID;
+  _localWebData.firmwareVersion = FIRMWARE_VERSION;
+  _localWebData.uptimeMs = nowMs;
+  _localWebData.dht.temperatureC = 25.4F;
+  _localWebData.dht.humidityPercent = 61.0F;
+  _localWebData.dht.valid = true;
+  _localWebData.dht.updatedAtMs = nowMs;
+  _localWebData.light.lux = 340.0F;
+  _localWebData.light.valid = true;
+  _localWebData.light.updatedAtMs = nowMs;
+  _localWebData.accel.x = 0.1F;
+  _localWebData.accel.y = 0.2F;
+  _localWebData.accel.z = 9.8F;
+  _localWebData.accel.valid = true;
+  _localWebData.accel.updatedAtMs = nowMs;
+  _localWebData.gyro.x = 0.01F;
+  _localWebData.gyro.y = 0.02F;
+  _localWebData.gyro.z = 0.03F;
+  _localWebData.gyro.valid = true;
+  _localWebData.gyro.updatedAtMs = nowMs;
+  _localWebData.mag.x = 12.0F;
+  _localWebData.mag.y = 18.0F;
+  _localWebData.mag.z = 25.0F;
+  _localWebData.mag.valid = true;
+  _localWebData.mag.updatedAtMs = nowMs;
+  _localWebData.barometer.pressureHpa = 1006.6F;
+  _localWebData.barometer.temperatureC = 25.0F;
+  _localWebData.barometer.altitudeM = 10.0F;
+  _localWebData.barometer.valid = true;
+  _localWebData.barometer.updatedAtMs = nowMs;
+  _localWebData.imuValid = true;
+  _localWebData.storage.initialized = true;
+  _localWebData.storage.mounted = true;
+  _localWebData.storage.lastWriteOk = true;
+  _localWebData.cellular.modemPresent = true;
+  _localWebData.cellular.simReady = true;
+  _localWebData.cellular.networkRegistered = true;
+  _localWebData.cellular.gprsConnected = true;
+  _localWebData.cellular.signalQuality = 20;
+  _localWebData.cellular.signalDbm = -73;
+  _localWebData.mqtt.configured = true;
+  _localWebData.mqtt.connected = true;
+  _localWebData.mqtt.lastPublishOk = true;
+  _localWebData.mqtt.lastPublishSuccessMs = nowMs;
+  _localWebData.ota = _web.getOtaStatus();
+  _web.setData(_localWebData);
 }

@@ -14,11 +14,41 @@ void AppController::begin() {
   Logger::info("BOOT", "Starting " + String(DEVICE_ID) +
                            " app_mode=" + String(APP_MODE));
 
-#if APP_MODE != APP_MODE_FULL_PROTOTYPE
+#if APP_MODE != APP_MODE_FULL_PROTOTYPE && \
+    APP_MODE != APP_MODE_FULL_PROTOTYPE_CELLULAR
   _testRunner.begin();
   return;
 #endif
 
+  beginSharedSensors();
+
+#if APP_MODE == APP_MODE_FULL_PROTOTYPE
+  _wifi.begin();
+  _mqtt.begin(_wifiClient);
+#elif APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR
+  _light.begin();
+  _storage.begin();
+  _web.begin();
+  _modem.begin(SIM800LMode::Gprs);
+
+  constexpr bool useTls = CELLULAR_MQTT_USE_TLS != 0;
+  constexpr bool transportAllowed =
+      useTls || (ALLOW_INSECURE_CELLULAR_MQTT != 0);
+  if (transportAllowed) {
+    const MqttConnectionConfig cellularMqtt{
+        CELLULAR_MQTT_HOST, CELLULAR_MQTT_PORT, CELLULAR_MQTT_USERNAME,
+        CELLULAR_MQTT_PASSWORD, CELLULAR_MQTT_TOPIC};
+    _mqtt.begin(_modem.networkClient(useTls), cellularMqtt);
+  } else {
+    Logger::error("CONFIG", "Cellular MQTT blocked: enable TLS or explicit "
+                            "lab-only insecure override");
+  }
+#endif
+  _mqttStatus.configured = _mqtt.isConfigured();
+  Logger::info("BOOT", "Initialization complete; failures are non-fatal");
+}
+
+void AppController::beginSharedSensors() {
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
   Wire.setTimeOut(I2C_TIMEOUT_MS);
   _dht.begin();
@@ -34,15 +64,13 @@ void AppController::begin() {
       "Reference p0=" + String(barometerCalibration.seaLevelPressureHpa, 3) +
           " hPa source=" +
           BarometerCalibrationStore::sourceName(barometerCalibration.source));
-  _wifi.begin();
-  _mqtt.begin(_wifiClient);
-  Logger::info("BOOT", "Initialization complete; failures are non-fatal");
 }
 
 void AppController::update() {
   const uint32_t nowMs = millis();
 
-#if APP_MODE != APP_MODE_FULL_PROTOTYPE
+#if APP_MODE != APP_MODE_FULL_PROTOTYPE && \
+    APP_MODE != APP_MODE_FULL_PROTOTYPE_CELLULAR
   _testRunner.update(nowMs);
   delay(1);
   return;
@@ -51,8 +79,25 @@ void AppController::update() {
   _gps.update(nowMs);
   _dht.update(nowMs);
   _gy801.update(nowMs);
+
+#if APP_MODE == APP_MODE_FULL_PROTOTYPE
   _wifi.update(nowMs);
   _mqtt.update(nowMs, _wifi.isConnected());
+#elif APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR
+  _light.update(nowMs);
+  _storage.update(nowMs);
+  _modem.update(nowMs);
+  _mqtt.update(nowMs, _modem.isGprsConnected());
+  _mqttStatus.configured = _mqtt.isConfigured();
+  _mqttStatus.connected = _mqtt.isConnected();
+  _mqttStatus.clientState = static_cast<int16_t>(_mqtt.state());
+  _web.update(nowMs);
+  if (static_cast<uint32_t>(nowMs - _lastWebSnapshotMs) >=
+      LOCAL_WEB_SNAPSHOT_INTERVAL_MS) {
+    _lastWebSnapshotMs = nowMs;
+    refreshLocalWebData(nowMs);
+  }
+#endif
 
   if (static_cast<uint32_t>(nowMs - _lastTelemetryMs) >= TELEMETRY_INTERVAL_MS) {
     _lastTelemetryMs = nowMs;
@@ -67,6 +112,9 @@ void AppController::buildSnapshot(uint32_t nowMs) {
   _telemetry.dht = _dht.getData();
   _telemetry.gps = _gps.getData();
   _telemetry.gy801 = _gy801.getData();
+  _telemetry.light = _light.getData();
+  _telemetry.storage = _storage.getStatus();
+  _telemetry.cellular = _modem.getStatus();
   TelemetryValidator::validate(_telemetry, nowMs);
 }
 
@@ -80,11 +128,51 @@ void AppController::publishTelemetry(uint32_t nowMs) {
 
   Logger::info("JSON", String(_payload));
   Logger::debug("JSON", "Payload bytes=" + String(written));
+
+#if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR
+  if (_web.otaInProgress()) {
+    Logger::warn("OTA", "Storage and MQTT paused during firmware upload");
+    return;
+  }
+  if (!_storage.appendJsonLine(_payload, written, nowMs)) {
+    Logger::warn("SD", "Telemetry sample was not persisted");
+  }
+#endif
+
   if (!_mqtt.isConnected()) {
     Logger::warn("MQTT", "Telemetry not published; broker offline (no local queue)");
     return;
   }
+  _mqttStatus.lastPublishAttemptMs = nowMs;
   if (_mqtt.publish(_payload)) {
+    _mqttStatus.lastPublishOk = true;
+    _mqttStatus.lastPublishSuccessMs = nowMs;
     Logger::info("MQTT", "Telemetry published");
+  } else {
+    _mqttStatus.lastPublishOk = false;
   }
+}
+
+void AppController::refreshLocalWebData(uint32_t nowMs) {
+#if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR
+  buildSnapshot(nowMs);
+  LocalWebData local;
+  local.deviceId = DEVICE_ID;
+  local.firmwareVersion = FIRMWARE_VERSION;
+  local.uptimeMs = _telemetry.uptimeMs;
+  local.dht = _telemetry.dht;
+  local.light = _telemetry.light;
+  local.accel = _telemetry.gy801.accel;
+  local.gyro = _telemetry.gy801.gyro;
+  local.mag = _telemetry.gy801.mag;
+  local.barometer = _telemetry.gy801.barometer;
+  local.imuValid = _telemetry.gy801.imuValid;
+  local.storage = _storage.getStatus();
+  local.cellular = _modem.getStatus();
+  local.mqtt = _mqttStatus;
+  local.ota = _web.getOtaStatus();
+  _web.setData(local);
+#else
+  (void)nowMs;
+#endif
 }

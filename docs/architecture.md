@@ -9,6 +9,10 @@ GY-801 ┘                               │                  │
                                       └──────────────> Serial
 
 BMP180 ─> BarometerMath <─ referencia config/NVS
+BH1750 ─┐
+Payload ├─> microSD JSONL
+        `─> SIM800L/GPRS ─> MQTT cloud
+Estado local ─> WebServer/AP ─> dashboard + OTA
 ```
 
 `AppController` es el único orquestador. Los sensores no conocen la red ni el
@@ -25,10 +29,14 @@ formato JSON, y los clientes de comunicación no conocen registros I2C.
 - `BarometerCalibrationRunner`: diagnóstico de 60 segundos que calcula
   candidatos por altitud conocida y GPS, sin guardarlos automáticamente.
 - `TelemetryValidator`: invalida datos fuera de rango, no finitos u obsoletos.
-- `TelemetryBuilder`: genera el esquema v1 y omite mediciones inválidas.
+- `TelemetryBuilder`: genera el esquema v2 y omite mediciones inválidas.
 - `WiFiManagerCustom`: conexión y backoff sin esperar en bucles bloqueantes.
 - `MQTTClientCustom`: MQTT 3.1.1 sobre cualquier implementación de `Client`.
 - `ModuleTestRunner`: inicializa solo el bloque seleccionado por `APP_MODE`.
+- `BH1750Sensor`: lux por el mismo bus I2C del GY-801.
+- `MicroSDLogger`: respaldo JSONL independiente de la conectividad.
+- `SIM800LModem`: estados AT, SIM, red 2G y GPRS.
+- `LocalWebServer`: monitor local sin GPS y administración OTA.
 
 El BMP180 no conoce GPS ni NVS. `AppController` carga la referencia persistida
 y la inyecta en la fachada GY-801. El environment `calibrate_bmp180` es el único
@@ -47,5 +55,6 @@ segundos.
 ## Extensiones futuras
 
 Un nuevo sensor solo necesita producir datos y ser agregado a la instantánea.
-La microSD podrá añadirse como otro consumidor del payload. Un módem celular
-podrá entregar otro `Client` a `MQTTClientCustom` sin cambiar el builder.
+Otros módems pueden entregar un `Client` a `MQTTClientCustom` sin cambiar el
+builder. El roadmap conserva fusión IMU, TLS con hardware moderno y backend
+cloud con historial.

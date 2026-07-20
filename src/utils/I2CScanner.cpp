@@ -41,14 +41,16 @@ void I2CScanner::reportExpected(const I2CScanResult& result) {
                     result.contains(L3G4200D_ADDRESS_ALTERNATE);
   const bool mag = result.contains(HMC5883L_ADDRESS);
   const bool baro = result.contains(BMP180_ADDRESS);
+  const bool light = result.contains(BH1750_ADDRESS_PRIMARY) ||
+                     result.contains(BH1750_ADDRESS_ALTERNATE);
 
   Logger::info("I2C", String("ADXL345: ") + (accel ? "address present" : "MISSING"));
   Logger::info("I2C", String("L3G4200D: ") + (gyro ? "address present" : "MISSING"));
   Logger::info("I2C", String("HMC5883L: ") + (mag ? "address present" : "MISSING"));
   Logger::info("I2C", String("BMP180/BMP085: ") + (baro ? "address present" : "MISSING"));
+  Logger::info("I2C", String("BH1750: ") + (light ? "address present" : "MISSING"));
 
   if (!mag && result.contains(QMC5883L_POSSIBLE_ADDRESS)) {
     Logger::warn("I2C", "0x0D detected: possible QMC5883L clone; HMC driver disabled");
   }
 }
-

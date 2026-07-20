@@ -29,6 +29,12 @@ void TelemetryValidator::validate(TelemetryData& data, uint32_t nowMs) {
                    data.gps.latitude >= -90.0 && data.gps.latitude <= 90.0 &&
                    data.gps.longitude >= -180.0 && data.gps.longitude <= 180.0;
 
+  data.light.valid = data.light.valid &&
+                     isFresh(nowMs, data.light.updatedAtMs,
+                             LIGHT_READ_INTERVAL_MS * 3UL) &&
+                     std::isfinite(data.light.lux) && data.light.lux >= 0.0F &&
+                     data.light.lux <= BH1750_MAX_LUX;
+
   data.gy801.accel.valid = data.gy801.accel.valid &&
                            isFresh(nowMs, data.gy801.accel.updatedAtMs,
                                    IMU_READ_INTERVAL_MS * 5UL) &&

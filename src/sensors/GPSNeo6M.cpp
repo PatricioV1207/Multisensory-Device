@@ -54,7 +54,7 @@ void GPSNeo6M::update(uint32_t nowMs) {
       (_lastWarningMs == 0 ||
        static_cast<uint32_t>(nowMs - _lastWarningMs) >= GPS_NO_DATA_WARNING_MS)) {
     _lastWarningMs = nowMs;
-    Logger::warn("GPS", "No UART data; verify power, TX->GPIO16 and 9600 baud");
+    Logger::warn("GPS", "No UART data; verify power, TX->GPIO32 and 9600 baud");
   }
 }
 

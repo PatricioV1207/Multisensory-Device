@@ -2,10 +2,17 @@
 
 #include <cmath>
 #include <cstdint>
+#include "system/RuntimeStatus.h"
 
 struct DHT11Data {
   float temperatureC = NAN;
   float humidityPercent = NAN;
+  bool valid = false;
+  uint32_t updatedAtMs = 0;
+};
+
+struct LightData {
+  float lux = NAN;
   bool valid = false;
   uint32_t updatedAtMs = 0;
 };
@@ -82,4 +89,7 @@ struct TelemetryData {
   DHT11Data dht;
   GPSData gps;
   GY801Data gy801;
+  LightData light;
+  StorageStatus storage;
+  CellularStatus cellular;
 };

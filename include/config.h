@@ -19,6 +19,15 @@
 #define APP_MODE_TEST_WIFI 9
 #define APP_MODE_TEST_MQTT_WIFI 10
 #define APP_MODE_CALIBRATE_BMP180 11
+#define APP_MODE_TEST_BH1750 12
+#define APP_MODE_TEST_MICROSD 13
+#define APP_MODE_TEST_SIM800L_AT 14
+#define APP_MODE_TEST_SIM800L_GPRS 15
+#define APP_MODE_TEST_SIM800L_MQTT 16
+#define APP_MODE_TEST_SIM800L_MQTT_TLS 17
+#define APP_MODE_TEST_LOCAL_WEB 18
+#define APP_MODE_TEST_LOCAL_OTA 19
+#define APP_MODE_FULL_PROTOTYPE_CELLULAR 20
 
 #ifndef APP_MODE
 #define APP_MODE APP_MODE_FULL_PROTOTYPE
@@ -26,6 +35,10 @@
 
 #ifndef DEVICE_ID
 #define DEVICE_ID "bus_iot_prototype_01"
+#endif
+
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "0.2.0"
 #endif
 
 #ifndef SERIAL_BAUD
@@ -54,6 +67,10 @@
 #define BARO_READ_INTERVAL_MS 2000UL
 #endif
 
+#ifndef LIGHT_READ_INTERVAL_MS
+#define LIGHT_READ_INTERVAL_MS 1000UL
+#endif
+
 #ifndef IMU_READ_INTERVAL_MS
 #define IMU_READ_INTERVAL_MS 100UL
 #endif
@@ -72,6 +89,26 @@
 
 #ifndef SENSOR_RETRY_INTERVAL_MS
 #define SENSOR_RETRY_INTERVAL_MS 30000UL
+#endif
+
+#ifndef SD_RETRY_INTERVAL_MS
+#define SD_RETRY_INTERVAL_MS 30000UL
+#endif
+
+#ifndef SIM800_ACTION_INTERVAL_MS
+#define SIM800_ACTION_INTERVAL_MS 5000UL
+#endif
+
+#ifndef SIM800_STATUS_INTERVAL_MS
+#define SIM800_STATUS_INTERVAL_MS 30000UL
+#endif
+
+#ifndef SIM800_TCP_TEST_INTERVAL_MS
+#define SIM800_TCP_TEST_INTERVAL_MS 30000UL
+#endif
+
+#ifndef LOCAL_WEB_SNAPSHOT_INTERVAL_MS
+#define LOCAL_WEB_SNAPSHOT_INTERVAL_MS 1000UL
 #endif
 
 #ifndef GPS_FIX_MAX_AGE_MS
@@ -99,7 +136,7 @@
 #endif
 
 #ifndef MQTT_BUFFER_SIZE
-#define MQTT_BUFFER_SIZE 1536U
+#define MQTT_BUFFER_SIZE 2304U
 #endif
 
 #ifndef MQTT_KEEPALIVE_SECONDS
@@ -111,7 +148,35 @@
 #endif
 
 #ifndef TELEMETRY_PAYLOAD_BUFFER_SIZE
-#define TELEMETRY_PAYLOAD_BUFFER_SIZE 1536U
+#define TELEMETRY_PAYLOAD_BUFFER_SIZE 2048U
+#endif
+
+#ifndef LOCAL_WEB_JSON_BUFFER_SIZE
+#define LOCAL_WEB_JSON_BUFFER_SIZE 1536U
+#endif
+
+#ifndef SIM800_BAUD
+#define SIM800_BAUD 9600UL
+#endif
+
+#ifndef SD_SPI_FREQUENCY_HZ
+#define SD_SPI_FREQUENCY_HZ 10000000UL
+#endif
+
+#ifndef SD_LOG_ROTATE_BYTES
+#define SD_LOG_ROTATE_BYTES 1048576UL
+#endif
+
+#ifndef BH1750_MAX_LUX
+#define BH1750_MAX_LUX 120000.0F
+#endif
+
+#ifndef CELLULAR_MQTT_USE_TLS
+#define CELLULAR_MQTT_USE_TLS 1
+#endif
+
+#ifndef ALLOW_INSECURE_CELLULAR_MQTT
+#define ALLOW_INSECURE_CELLULAR_MQTT 0
 #endif
 
 #ifndef BARO_DEFAULT_SEA_LEVEL_PRESSURE_HPA
@@ -125,7 +190,7 @@
 #endif
 
 #ifndef BARO_CALIBRATION_KNOWN_ALTITUDE_M
-#define BARO_CALIBRATION_KNOWN_ALTITUDE_M 10.00F
+#define BARO_CALIBRATION_KNOWN_ALTITUDE_M 85.00F
 #endif
 
 #ifndef BARO_CALIBRATION_DURATION_MS
@@ -186,6 +251,8 @@
 #define HMC5883L_ADDRESS 0x1E
 #define QMC5883L_POSSIBLE_ADDRESS 0x0D
 #define BMP180_ADDRESS 0x77
+#define BH1750_ADDRESS_PRIMARY 0x23
+#define BH1750_ADDRESS_ALTERNATE 0x5C
 
 // Safe defaults allow sensor-only environments to compile without secrets.h.
 #ifndef WIFI_SSID
@@ -214,4 +281,76 @@
 
 #ifndef MQTT_TOPIC
 #define MQTT_TOPIC "v1/devices/me/telemetry"
+#endif
+
+#ifndef CELLULAR_APN
+#define CELLULAR_APN ""
+#endif
+
+#ifndef CELLULAR_APN_USER
+#define CELLULAR_APN_USER ""
+#endif
+
+#ifndef CELLULAR_APN_PASSWORD
+#define CELLULAR_APN_PASSWORD ""
+#endif
+
+#ifndef CELLULAR_SIM_PIN
+#define CELLULAR_SIM_PIN ""
+#endif
+
+#ifndef CELLULAR_MQTT_HOST
+#define CELLULAR_MQTT_HOST ""
+#endif
+
+#ifndef CELLULAR_MQTT_PORT
+#define CELLULAR_MQTT_PORT 8883
+#endif
+
+#ifndef CELLULAR_MQTT_USERNAME
+#define CELLULAR_MQTT_USERNAME ""
+#endif
+
+#ifndef CELLULAR_MQTT_PASSWORD
+#define CELLULAR_MQTT_PASSWORD ""
+#endif
+
+#ifndef CELLULAR_MQTT_TOPIC
+#define CELLULAR_MQTT_TOPIC "buses/prototype/telemetry"
+#endif
+
+#ifndef MQTT_TEST_HOST
+#define MQTT_TEST_HOST ""
+#endif
+
+#ifndef MQTT_TEST_PORT
+#define MQTT_TEST_PORT 1883
+#endif
+
+#ifndef MQTT_TEST_USERNAME
+#define MQTT_TEST_USERNAME ""
+#endif
+
+#ifndef MQTT_TEST_PASSWORD
+#define MQTT_TEST_PASSWORD ""
+#endif
+
+#ifndef MQTT_TEST_TOPIC
+#define MQTT_TEST_TOPIC "buses/prototype/diagnostics"
+#endif
+
+#ifndef LOCAL_AP_SSID
+#define LOCAL_AP_SSID ""
+#endif
+
+#ifndef LOCAL_AP_PASSWORD
+#define LOCAL_AP_PASSWORD ""
+#endif
+
+#ifndef LOCAL_ADMIN_USERNAME
+#define LOCAL_ADMIN_USERNAME ""
+#endif
+
+#ifndef LOCAL_ADMIN_PASSWORD
+#define LOCAL_ADMIN_PASSWORD ""
 #endif

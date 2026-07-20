@@ -17,6 +17,13 @@ TelemetryData completeSample() {
   data.gy801.barometer.rawPressureHpa = 1012.8F;
   data.gy801.barometer.seaLevelPressureHpa = 1013.3F;
   data.gy801.imuValid = true;
+  data.light = {250.0F, true, 1000};
+  data.storage.mounted = true;
+  data.cellular.modemPresent = true;
+  data.cellular.simReady = true;
+  data.cellular.networkRegistered = true;
+  data.cellular.gprsConnected = true;
+  data.cellular.signalQuality = 18;
   return data;
 }
 
@@ -29,7 +36,7 @@ void test_complete_payload_contains_expected_fields() {
 
   JsonDocument doc;
   TEST_ASSERT_FALSE(deserializeJson(doc, output));
-  TEST_ASSERT_EQUAL(1, doc["schema_version"].as<int>());
+  TEST_ASSERT_EQUAL(2, doc["schema_version"].as<int>());
   TEST_ASSERT_EQUAL_STRING("bus_iot_prototype_01", doc["device_id"]);
   TEST_ASSERT_TRUE(doc["imu_valid"].as<bool>());
   TEST_ASSERT_FLOAT_WITHIN(0.001F, 25.4F, doc["temperature_c"].as<float>());
@@ -37,6 +44,12 @@ void test_complete_payload_contains_expected_fields() {
   TEST_ASSERT_FLOAT_WITHIN(0.001F, 1012.8F, doc["pressure_hpa"].as<float>());
   TEST_ASSERT_FLOAT_WITHIN(0.001F, 1013.3F,
                            doc["sea_level_pressure_hpa"].as<float>());
+  TEST_ASSERT_FLOAT_WITHIN(0.001F, 250.0F, doc["light_lux"].as<float>());
+  TEST_ASSERT_TRUE(doc["bh1750_valid"].as<bool>());
+  TEST_ASSERT_TRUE(doc["sd_valid"].as<bool>());
+  TEST_ASSERT_TRUE(doc["sim_valid"].as<bool>());
+  TEST_ASSERT_TRUE(doc["gprs_connected"].as<bool>());
+  TEST_ASSERT_EQUAL(18, doc["gsm_csq"].as<int>());
   TEST_ASSERT_FALSE(doc["pressure_raw_hpa"].is<float>());
 }
 
@@ -45,6 +58,7 @@ void test_invalid_measurements_are_omitted_but_flags_remain() {
   data.dht.valid = false;
   data.gps.valid = false;
   data.gy801.mag.valid = false;
+  data.light.valid = false;
   data.gy801.imuValid = false;
   char output[1536];
   TEST_ASSERT_TRUE(TelemetryBuilder::build(data, output, sizeof(output)));
@@ -55,9 +69,11 @@ void test_invalid_measurements_are_omitted_but_flags_remain() {
   TEST_ASSERT_FALSE(doc["gps_valid"].as<bool>());
   TEST_ASSERT_FALSE(doc["mag_valid"].as<bool>());
   TEST_ASSERT_FALSE(doc["imu_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["bh1750_valid"].as<bool>());
   TEST_ASSERT_FALSE(doc["temperature_c"].is<float>());
   TEST_ASSERT_FALSE(doc["latitude"].is<double>());
   TEST_ASSERT_FALSE(doc["mag_x"].is<float>());
+  TEST_ASSERT_FALSE(doc["light_lux"].is<float>());
   TEST_ASSERT_TRUE(doc["accel_x"].is<float>());
 }
 

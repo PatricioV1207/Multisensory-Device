@@ -1,0 +1,117 @@
+#include "web/LocalWebJsonBuilder.h"
+
+#include <ArduinoJson.h>
+#include <cmath>
+
+namespace {
+bool serializeDocument(JsonDocument& document, char* output,
+                       size_t outputSize) {
+  if (output == nullptr || outputSize == 0 ||
+      measureJson(document) + 1U > outputSize) {
+    if (output != nullptr && outputSize > 0) {
+      output[0] = '\0';
+    }
+    return false;
+  }
+  const size_t count = serializeJson(document, output, outputSize);
+  return count > 0 && count + 1U <= outputSize;
+}
+
+float magnitude3(float x, float y, float z) {
+  return std::sqrt((x * x) + (y * y) + (z * z));
+}
+}  // namespace
+
+bool LocalWebJsonBuilder::buildStatus(const LocalWebData& data, char* output,
+                                      size_t outputSize) {
+  JsonDocument document;
+  document["api_version"] = 1;
+  document["device_id"] = data.deviceId == nullptr ? "" : data.deviceId;
+  document["firmware_version"] =
+      data.firmwareVersion == nullptr ? "" : data.firmwareVersion;
+  document["uptime_ms"] = data.uptimeMs;
+
+  JsonObject sd = document["sd"].to<JsonObject>();
+  sd["mounted"] = data.storage.mounted;
+  sd["last_write_ok"] = data.storage.lastWriteOk;
+  sd["last_write_ms"] = data.storage.lastWriteMs;
+  sd["free_bytes"] = data.storage.freeBytes;
+
+  JsonObject sim = document["sim800l"].to<JsonObject>();
+  sim["present"] = data.cellular.modemPresent;
+  sim["sim_ready"] = data.cellular.simReady;
+  sim["network_registered"] = data.cellular.networkRegistered;
+  sim["gprs_connected"] = data.cellular.gprsConnected;
+  if (data.cellular.modemName[0] != '\0') {
+    sim["model"] = data.cellular.modemName;
+  }
+  if (data.cellular.operatorName[0] != '\0') {
+    sim["operator"] = data.cellular.operatorName;
+  }
+  if (data.cellular.localIp[0] != '\0') {
+    sim["local_ip"] = data.cellular.localIp;
+  }
+  if (data.cellular.signalQuality >= 0) {
+    sim["csq"] = data.cellular.signalQuality;
+    sim["signal_dbm"] = data.cellular.signalDbm;
+  }
+
+  JsonObject mqtt = document["mqtt"].to<JsonObject>();
+  mqtt["configured"] = data.mqtt.configured;
+  mqtt["connected"] = data.mqtt.connected;
+  mqtt["last_publish_ok"] = data.mqtt.lastPublishOk;
+  mqtt["last_publish_ms"] = data.mqtt.lastPublishSuccessMs;
+  mqtt["state"] = data.mqtt.clientState;
+
+  JsonObject ota = document["ota"].to<JsonObject>();
+  ota["enabled"] = data.ota.enabled;
+  ota["in_progress"] = data.ota.inProgress;
+  ota["last_update_ok"] = data.ota.lastUpdateOk;
+  return serializeDocument(document, output, outputSize);
+}
+
+bool LocalWebJsonBuilder::buildBasicTelemetry(const LocalWebData& data,
+                                              char* output,
+                                              size_t outputSize) {
+  JsonDocument document;
+  document["api_version"] = 1;
+  document["uptime_ms"] = data.uptimeMs;
+  document["dht_valid"] = data.dht.valid;
+  document["bh1750_valid"] = data.light.valid;
+  document["baro_valid"] = data.barometer.valid;
+  document["accel_valid"] = data.accel.valid;
+  document["gyro_valid"] = data.gyro.valid;
+  document["mag_valid"] = data.mag.valid;
+  document["imu_valid"] = data.imuValid;
+
+  if (data.dht.valid && std::isfinite(data.dht.temperatureC) &&
+      std::isfinite(data.dht.humidityPercent)) {
+    document["temperature_c"] = data.dht.temperatureC;
+    document["humidity_percent"] = data.dht.humidityPercent;
+  }
+  if (data.light.valid && std::isfinite(data.light.lux)) {
+    document["light_lux"] = data.light.lux;
+  }
+  if (data.barometer.valid &&
+      std::isfinite(data.barometer.pressureHpa) &&
+      std::isfinite(data.barometer.altitudeM)) {
+    document["pressure_hpa"] = data.barometer.pressureHpa;
+    document["baro_altitude_m"] = data.barometer.altitudeM;
+  }
+  if (data.accel.valid && std::isfinite(data.accel.x) &&
+      std::isfinite(data.accel.y) && std::isfinite(data.accel.z)) {
+    document["accel_magnitude_mps2"] =
+        magnitude3(data.accel.x, data.accel.y, data.accel.z);
+  }
+  if (data.gyro.valid && std::isfinite(data.gyro.x) &&
+      std::isfinite(data.gyro.y) && std::isfinite(data.gyro.z)) {
+    document["gyro_magnitude_rad_s"] =
+        magnitude3(data.gyro.x, data.gyro.y, data.gyro.z);
+  }
+  if (data.mag.valid && std::isfinite(data.mag.x) &&
+      std::isfinite(data.mag.y) && std::isfinite(data.mag.z)) {
+    document["mag_magnitude_ut"] =
+        magnitude3(data.mag.x, data.mag.y, data.mag.z);
+  }
+  return serializeDocument(document, output, outputSize);
+}

@@ -27,6 +27,10 @@ bool TelemetryBuilder::build(const TelemetryData& data, char* output,
   doc["mag_valid"] = data.gy801.mag.valid;
   doc["baro_valid"] = data.gy801.barometer.valid;
   doc["imu_valid"] = data.gy801.imuValid;
+  doc["bh1750_valid"] = data.light.valid;
+  doc["sd_valid"] = data.storage.mounted;
+  doc["sim_valid"] = data.cellular.modemPresent && data.cellular.simReady;
+  doc["gprs_connected"] = data.cellular.gprsConnected;
 
   if (data.dht.valid && std::isfinite(data.dht.temperatureC) &&
       std::isfinite(data.dht.humidityPercent)) {
@@ -42,6 +46,15 @@ bool TelemetryBuilder::build(const TelemetryData& data, char* output,
     doc["altitude_m"] = data.gps.altitudeM;
     doc["speed_kmh"] = data.gps.speedKmh;
     doc["satellites"] = data.gps.satellites;
+  }
+
+  if (data.light.valid && std::isfinite(data.light.lux)) {
+    doc["light_lux"] = data.light.lux;
+  }
+
+  if (data.cellular.signalQuality >= 0 &&
+      data.cellular.signalQuality <= 31) {
+    doc["gsm_csq"] = data.cellular.signalQuality;
   }
 
   if (data.gy801.accel.valid && std::isfinite(data.gy801.accel.x) &&

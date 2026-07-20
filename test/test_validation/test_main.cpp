@@ -13,6 +13,7 @@ TelemetryData validSample() {
   data.gy801.barometer = {1013.25F, 25.0F, 0.0F, true, 9900};
   data.gy801.barometer.rawPressureHpa = 1013.25F;
   data.gy801.barometer.seaLevelPressureHpa = 1013.25F;
+  data.light = {300.0F, true, 9900};
   return data;
 }
 
@@ -23,6 +24,7 @@ void test_valid_data_remains_valid() {
   TEST_ASSERT_TRUE(data.gps.valid);
   TEST_ASSERT_TRUE(data.gy801.imuValid);
   TEST_ASSERT_TRUE(data.gy801.barometer.valid);
+  TEST_ASSERT_TRUE(data.light.valid);
 }
 
 void test_partial_imu_failure_does_not_invalidate_other_components() {
@@ -40,10 +42,12 @@ void test_stale_and_out_of_range_values_are_invalidated() {
   data.dht.updatedAtMs = 1;
   data.gps.latitude = 120.0;
   data.gy801.barometer.pressureHpa = 1500.0F;
+  data.light.lux = -1.0F;
   TelemetryValidator::validate(data, 10000);
   TEST_ASSERT_FALSE(data.dht.valid);
   TEST_ASSERT_FALSE(data.gps.valid);
   TEST_ASSERT_FALSE(data.gy801.barometer.valid);
+  TEST_ASSERT_FALSE(data.light.valid);
 }
 }  // namespace
 
