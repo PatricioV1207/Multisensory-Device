@@ -1,0 +1,1 @@
+"""Authenticated live-update hub."""

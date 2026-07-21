@@ -1,34 +1,77 @@
-# Arquitectura cloud propuesta
+# Arquitectura cloud de VehicleSense
 
-La web cloud no forma parte del firmware de esta fase:
+VehicleSense usa HiveMQ Cloud como transporte en tiempo real y PostgreSQL como
+almacenamiento histórico. El backend es la única frontera de confianza.
 
 ```text
-ESP32 + SIM800L -> MQTT/TLS -> broker cloud
-                                  |-> WSS read-only -> frontend Vercel
-                                  `-> bridge MQTT -> Supabase -> historial
+ESP32 + sensores + microSD
+           │ WiFi / MQTT 3.1.1 / TLS / QoS 1
+           ▼
+      HiveMQ Cloud
+           │ suscripciones con ACL de backend
+           ▼
+ FastAPI ──────────────── PostgreSQL
+    │ REST histórico           │
+    │ WebSocket en vivo        │
+    ▼                          │
+ React VehicleSense ◄──────────┘
 ```
 
-La web cloud mostrará GPS, mapa, ruta, sensores completos, gráficas e historial.
-La vista local continuará sin GPS.
+El frontend no abre WebSocket MQTT, no conoce credenciales HiveMQ y no usa el
+broker como base de datos. REST reconstruye el estado después de una
+reconexión; el WebSocket de FastAPI entrega solamente cambios en vivo.
 
-Para el prototipo se propone HiveMQ Cloud o EMQX Cloud como broker y Vercel
-para el frontend. Ambos brokers cloud deben comprobarse primero con
-`test_sim800l_mqtt_tls`: sus planes administrados usan TLS y EMQX Serverless
-requiere además SNI. Los planes gratuitos y sus límites pueden cambiar, por lo
-que deben verificarse antes del despliegue.
+## Responsabilidades
 
-El navegador se conecta por WSS solamente para una vista en vivo y usa una
-credencial exclusiva de lectura limitada por ACL. Nunca se expone la
-credencial con permisos de publicación del bus ni una clave administrativa.
+### ESP32
 
-Para historial, un consumidor MQTT siempre activo valida el payload v2 y lo
-escribe en Supabase; Vercel consulta esa base. El plan gratuito de Supabase
-puede pausar proyectos inactivos. Vercel es adecuado para frontend y funciones
-cortas, no para mantener un suscriptor MQTT permanente. Una instancia gratuita
-de Render que se suspende tras inactividad HTTP tampoco es fiable como bridge
-siempre activo.
+- adquiere y valida sensores sin fabricar ceros ni `NaN`;
+- sirve el monitor local aun sin Internet;
+- respalda JSONL y mantiene un spool offline acotado en microSD;
+- publica identidad, hora válida, telemetría, estado, acústica y eventos;
+- recibe únicamente comandos dirigidos a su `vehicle_id/device_id`.
 
-AWS IoT Core queda como evolución profesional: exige TLS moderno y normalmente
-certificados X.509 por dispositivo, lo que aumenta la complejidad y el riesgo
-de compatibilidad con SIM800L. Si TLS/SNI no es estable, la recomendación es
-migrar el transporte a SIM7600, no degradar la telemetría real a MQTT abierto.
+### HiveMQ Cloud
+
+- autentica por credencial separada para cada dispositivo y para el backend;
+- aplica ACL de mínimo privilegio;
+- conserva presencia retenida/LWT, no historial de telemetría;
+- entrega QoS 1; los consumidores deben ser idempotentes.
+
+### Backend FastAPI
+
+- valida tópico, identidad, tamaño, JSON estricto y schema versionado;
+- persiste en PostgreSQL y pone rechazos en cuarentena;
+- calcula `online/stale/offline`, alertas y viajes GPS básicos;
+- conserva datos acústicos honestos y su marca `simulated`;
+- expone REST `/api/v1` y WebSocket `/ws/v1/live` con JWT y roles;
+- confirma MQTT después de persistir para permitir reentrega ante fallos.
+
+### PostgreSQL
+
+- almacena usuarios, vehículos, dispositivos, telemetría, acústica, alertas,
+  viajes, trayectoria, historial de estado, comandos y fallos de ingestión;
+- no se expone directamente a Internet;
+- se actualiza mediante migraciones Alembic y se respalda con `pg_dump`.
+
+### Frontend
+
+- obtiene estado inicial e histórico mediante REST;
+- aplica actualizaciones WebSocket y vuelve a consultar tras reconectar;
+- distingue carga, ausencia de datos, sensor inválido, stale, offline y demo;
+- muestra mapas mediante OpenStreetMap/Leaflet sin credenciales MQTT.
+
+## Producción prevista en Oracle Cloud
+
+La topología objetivo usa una VM Ubuntu ARM64/x86_64 con contenedores para
+Nginx, frontend estático, FastAPI y PostgreSQL. Solamente Nginx publica 80/443;
+FastAPI y PostgreSQL permanecen en la red privada de Compose. Los certificados,
+secrets, volumen PostgreSQL, health checks, backup, actualización y rollback se
+documentan junto con los artefactos de despliegue.
+
+## Fuera de esta fase
+
+El firmware conserva el trabajo SIM800L, pero el transporte activo de esta
+fase es WiFi. La conectividad celular no se depura ni se convierte en una
+dependencia del backend. El clasificador acústico seguirá siendo heurístico
+hasta contar con grabaciones reales etiquetadas en la instalación final.
