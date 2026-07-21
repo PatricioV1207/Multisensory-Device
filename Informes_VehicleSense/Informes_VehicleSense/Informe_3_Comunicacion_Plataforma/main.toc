@@ -1,0 +1,38 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {chapter}{Resumen ejecutivo}{\es@scroman {i}}{chapter*.1}%
+\contentsline {chapter}{\numberline {1}Arquitectura de extremo a extremo}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Componentes}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Responsabilidades}{1}{section.1.2}%
+\contentsline {chapter}{\numberline {2}Telemetría y persistencia local}{2}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Snapshot y validación}{2}{section.2.1}%
+\contentsline {section}{\numberline {2.2}JSON Lines en microSD}{2}{section.2.2}%
+\contentsline {chapter}{\numberline {3}MQTT y conectividad}{4}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Sesión segura}{4}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Reconexión y entrega}{4}{section.3.2}%
+\contentsline {section}{\numberline {3.3}SIM800L y evolución celular}{4}{section.3.3}%
+\contentsline {chapter}{\numberline {4}Web local del ESP32}{5}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Propósito}{5}{section.4.1}%
+\contentsline {section}{\numberline {4.2}API local}{6}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Administración y OTA}{6}{section.4.3}%
+\contentsline {chapter}{\numberline {5}Aplicación cloud VehicleSense}{8}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Origen de las capturas}{8}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Acceso}{8}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Dashboard de flota}{9}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Mapa en vivo}{10}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Listado y detalle de vehículos}{11}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Alertas}{13}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Viajes}{14}{section.5.7}%
+\contentsline {section}{\numberline {5.8}Analítica}{15}{section.5.8}%
+\contentsline {section}{\numberline {5.9}Reportes}{16}{section.5.9}%
+\contentsline {section}{\numberline {5.10}Dispositivos}{17}{section.5.10}%
+\contentsline {section}{\numberline {5.11}Configuración}{18}{section.5.11}%
+\contentsline {chapter}{\numberline {6}Backend, base de datos y tiempo real}{19}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Ingestión}{19}{section.6.1}%
+\contentsline {section}{\numberline {6.2}API REST y WebSocket}{19}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Tratamiento temporal}{19}{section.6.3}%
+\contentsline {chapter}{\numberline {7}Despliegue y seguridad}{20}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Prototipo y producción}{20}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Controles mínimos}{20}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Limitaciones actuales}{20}{section.7.3}%
+\contentsline {chapter}{\numberline {8}Plan de prueba de integración}{21}{chapter.8}%
+\contentsline {chapter}{\numberline {9}Conclusiones}{22}{chapter.9}%

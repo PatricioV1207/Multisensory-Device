@@ -1,0 +1,19 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Introducción}{2}{section.1}%
+\contentsline {paragraph}{Repositorio del proyecto.}{2}{section.1}%
+\contentsline {section}{\numberline {2}Objetivo del diseño}{2}{section.2}%
+\contentsline {section}{\numberline {3}Diseño de la caja electrónica}{2}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Dimensiones principales}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Aberturas implementadas}{3}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Fijación de la PCB}{4}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Esquemático de conexiones}{5}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Bloques representados}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Interfaces y pines principales}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Alimentación y filtrado}{7}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Diagrama de la PCB}{7}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Distribución de componentes}{8}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Consideraciones del trazado}{9}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Vista tridimensional de la PCB}{9}{section.6}%
+\contentsline {section}{\numberline {7}Integración de la PCB con la caja}{10}{section.7}%
+\contentsline {section}{\numberline {8}Recomendaciones de fabricación}{10}{section.8}%
+\contentsline {section}{\numberline {9}Conclusiones}{11}{section.9}%

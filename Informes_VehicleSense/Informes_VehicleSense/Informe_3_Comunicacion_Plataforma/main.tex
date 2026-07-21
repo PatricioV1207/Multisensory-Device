@@ -1,0 +1,403 @@
+\documentclass[11pt,a4paper,oneside]{report}
+\input{../common/preamble.tex}
+\input{../common/datos.tex}
+\graphicspath{{../recursos/web_local/}{../recursos/web_cloud/}}
+
+\begin{document}
+\VScover
+  {Comunicación, almacenamiento y plataforma web}
+  {Integración MQTT, web local, OTA y aplicación cloud VehicleSense}
+  {Informe técnico III}
+
+\pagenumbering{roman}
+\chapter*{Resumen ejecutivo}
+\addcontentsline{toc}{chapter}{Resumen ejecutivo}
+Este informe describe la aplicación integral del proyecto: el ESP32 construye
+telemetría validada, la respalda en microSD, la publica por MQTT seguro y expone un
+monitor local para diagnóstico y actualización OTA. En la nube, un broker desacopla
+el dispositivo de un backend que persiste los mensajes y alimenta un frontend con
+mapa, vehículos, alertas, viajes, analítica, reportes y administración.
+
+Las capturas cloud corresponden al frontend funcional en \textbf{modo demostración};
+la propia interfaz advierte que los vehículos y mediciones son simulados. Las capturas
+locales se generaron cargando el HTML embebido del firmware con respuestas JSON
+representativas. Por tanto, documentan diseño y funcionalidad, no una conexión física
+en vivo al ESP32.
+
+\begin{vsidea}[title={Resultado de integración}]
+La solución adopta una ruta principal WiFi + MQTT/TLS. La microSD y una cola offline
+reducen pérdida de datos, mientras REST/WebSocket separan historia y actualización en
+tiempo real. El SIM800L queda como transporte experimental; no se desactiva TLS de
+forma automática si el módem no lo soporta.
+\end{vsidea}
+
+\tableofcontents
+\listoffigures
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Arquitectura de extremo a extremo}
+
+\section{Componentes}
+\begin{figure}[H]\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=8mm and 8mm,
+box/.style={draw=VSLight,fill=VSSoft,rounded corners=2mm,minimum height=12mm,
+minimum width=31mm,align=center,font=\small},
+store/.style={box,fill=VSLight},arr/.style={-{Latex[length=2mm]},thick,VSTeal}]
+\node[box] (sens) {Sensores\\ESP32};
+\node[store,below=of sens] (sd) {microSD\\JSONL + cola};
+\node[box,right=of sens] (mqtt) {Broker\\MQTT/TLS};
+\node[box,right=of mqtt] (back) {Backend\\FastAPI};
+\node[store,above right=of back] (db) {PostgreSQL\\histórico};
+\node[box,below right=of back] (api) {REST +\\WebSocket};
+\node[box,right=of api] (web) {Frontend\\VehicleSense};
+\node[box,left=of sd] (local) {Web local\\AP + OTA};
+\draw[arr] (sens)--node[above,font=\scriptsize]{JSON v3}(mqtt);
+\draw[arr] (sens)--(sd); \draw[arr] (sens)--(local);
+\draw[arr] (mqtt)--(back); \draw[arr] (back)--(db); \draw[arr] (back)--(api);
+\draw[arr] (db)--(api); \draw[arr] (api)--(web);
+\end{tikzpicture}
+}
+\caption{Arquitectura funcional de VehicleSense.}
+\end{figure}
+
+\section{Responsabilidades}
+\begin{table}[H]\centering
+\caption{Separación de responsabilidades.}
+\begin{tabularx}{\textwidth}{@{}l Y Y@{}}
+\toprule
+\textbf{Componente} & \textbf{Responsabilidad} & \textbf{No debe hacer}\\
+\midrule
+Firmware & Adquirir, validar, etiquetar, respaldar y publicar & Inventar valores o depender del dashboard.\\
+Broker & Autenticar, autorizar y distribuir mensajes & Ser la base histórica principal.\\
+Backend & Ingerir, normalizar, persistir y servir API & Exponer secretos MQTT al navegador.\\
+Base de datos & Conservar telemetría, eventos y relaciones & Recibir conexiones directas del ESP32.\\
+Frontend & Visualizar, filtrar y gestionar acciones autorizadas & Presentar simulación como medición real.\\
+Web local & Diagnóstico cercano y OTA controlada & Sustituir el portal cloud o guardar gran historia.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Telemetría y persistencia local}
+
+\section{Snapshot y validación}
+En cada ciclo de publicación, el controlador toma una instantánea de los módulos. La
+validación considera bandera del driver, finitud, rango y antigüedad. Si el DHT11
+falla, se omiten temperatura y humedad pero se conserva \texttt{dht\_valid=false};
+el GPS sin fix no bloquea presión, IMU o luz.
+
+El esquema se versiona para que backend y firmware evolucionen sin ambigüedad. Un
+mensaje reducido puede ser:
+
+\begin{lstlisting}
+{
+  "schema_version": 3,
+  "device_id": "esp32-devkit-01",
+  "vehicle_id": "bus-prototipo-01",
+  "sample_id": "17-0000184",
+  "uptime_ms": 3720000,
+  "time_source": "ntp",
+  "temperature_c": 27.4,
+  "humidity_percent": 58.0,
+  "light_lux": 8240.0,
+  "pressure_hpa": 1006.72,
+  "baro_altitude_m": 10.4,
+  "dht_valid": true,
+  "gps_valid": false,
+  "imu_valid": true,
+  "sd_valid": true
+}
+\end{lstlisting}
+
+Los ejes \texttt{accel\_x/y/z} son valores calibrados; los raw quedan en diagnóstico.
+La presión publicada es local, mientras \texttt{sea\_level\_pressure\_hpa} describe la
+referencia usada para la altitud barométrica. Nunca se serializa NaN, \texttt{null} ni
+un cero ficticio.
+
+\section{JSON Lines en microSD}
+Cada muestra aceptada se escribe primero como una línea JSON en un archivo por sesión
+y segmento. Este formato facilita recuperación parcial y procesamiento por lotes.
+La escritura se confirma antes de marcar el estado como saludable. Los archivos rotan
+por tamaño y no se eliminan automáticamente en la fase académica.
+
+Una cola offline acotada registra mensajes no confirmados. Al recuperar MQTT, el
+dispositivo puede reenviar respetando identificadores de muestra para permitir
+deduplicación. Deben reportarse profundidad, bytes, muestras reproducidas y descartes.
+
+\begin{vswarning}
+microSD no equivale a una base transaccional. Un corte durante escritura puede dañar
+la última línea o el sistema FAT. La campaña necesita extracción controlada, capacidad
+monitorizada y copia frecuente. Sin RTC/NTP, el archivo usa sesión y uptime, no una
+fecha inventada.
+\end{vswarning}
+
+\chapter{MQTT y conectividad}
+
+\section{Sesión segura}
+MQTT utiliza el patrón publish/subscribe y permite desacoplar productores y
+consumidores \cite{mqtt}. La ruta cloud propuesta exige TLS, credencial independiente
+por dispositivo y ACL limitada a sus temas. El cliente publica con QoS~1, conserva el
+token hasta PUBACK y utiliza LWT para exponer desconexión inesperada.
+
+\begin{table}[H]\centering
+\caption{Familia de temas propuesta.}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Tema} & \textbf{Uso}\\
+\midrule
+\texttt{vehicles/<id>/telemetry} & Muestras completas o parciales.\\
+\texttt{vehicles/<id>/status} & Online, versión, uptime y salud.\\
+\texttt{vehicles/<id>/events} & Eventos derivados con severidad y contexto.\\
+\texttt{vehicles/<id>/commands} & Comandos autenticados; requiere diseño de respuesta.\\
+\texttt{vehicles/<id>/ack} & Confirmación de comandos y correlación.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Reconexión y entrega}
+WiFi y MQTT poseen backoff independiente. La adquisición nunca espera de forma
+indefinida una conexión. Si WiFi cae, el dispositivo sigue escribiendo en microSD; al
+volver, MQTT restablece sesión y la cola inicia replay. El backend deduplica por
+\texttt{device\_id}+\texttt{sample\_id}.
+
+\section{SIM800L y evolución celular}
+La interfaz de MQTT recibe un \texttt{Client}, por lo que puede operar sobre WiFi,
+TCP celular o TLS celular. Sin embargo, SIM800L depende de 2G y su soporte SSL varía.
+La secuencia experimental es AT $\rightarrow$ SIM $\rightarrow$ registro $\rightarrow$
+APN/GPRS $\rightarrow$ TCP sintético $\rightarrow$ TLS/SNI $\rightarrow$ MQTT. Si
+TLS falla, el perfil integrado conserva datos localmente y recomienda un módem LTE;
+no transmite telemetría real en texto plano por defecto.
+
+\chapter{Web local del ESP32}
+
+\section{Propósito}
+El ESP32 puede mantener un Access Point WPA2 y atender HTTP sin recursos externos. El
+dashboard consulta \texttt{/api/status} y \texttt{/api/telemetry/basic} cada dos
+segundos. Muestra variables ambientales, magnitudes resumidas de IMU, almacenamiento,
+conectividad, MQTT, audio, uptime y alertas. La interfaz permanece útil aunque Internet
+o el broker no estén disponibles.
+
+\begin{figure}[H]\centering
+\includegraphics[width=\textwidth]{local_dashboard.png}
+\caption{Monitor local. Vista documental del HTML embebido con datos representativos; no es una sesión física del ESP32.}
+\end{figure}
+
+La figura muestra un estado saludable, GPS con flujo NMEA pero sin fix, microSD
+montada y MQTT conectado. Los valores se escogieron únicamente para recorrer los
+estados visuales. El pie de página comunica actualización local y ausencia de mapa.
+
+\section{API local}
+\begin{table}[H]\centering
+\caption{Endpoints HTTP embebidos.}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Método} & \textbf{Ruta} & \textbf{Función}\\
+\midrule
+GET & \texttt{/} & Dashboard responsive de diagnóstico.\\
+GET & \texttt{/api/status} & Red, SD, MQTT, cola, OTA, sesión y uptime.\\
+GET & \texttt{/api/telemetry/basic} & Sensores básicos y magnitudes resumidas.\\
+GET & \texttt{/admin} & Formulario de actualización autenticado.\\
+POST & \texttt{/admin/update} & Recibe \texttt{firmware.bin} y ejecuta Update.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{vswarning}
+Hallazgo de revisión: aunque el requisito original indicaba no mostrar GPS en la web
+local, el HTML actual contiene una tarjeta GPS y la API básica puede incluir latitud y
+longitud cuando el fix es válido. La vista capturada no expone coordenadas porque el
+ejemplo usa \texttt{gps\_valid=false}, pero el contrato sí las contempla. Debe decidirse
+si se elimina esa información antes de una prueba con usuarios.
+\end{vswarning}
+
+\section{Administración y OTA}
+\texttt{/admin} exige autenticación HTTP Basic adicional. El usuario selecciona el
+\texttt{firmware.bin} generado para el mismo environment. El firmware valida cada
+bloque, llama a \texttt{Update.end(true)} y reinicia solo después de responder éxito.
+La tabla de particiones conserva dos slots OTA; USB permanece como recuperación.
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.86\textwidth]{local_admin_ota.png}
+\caption{Formulario OTA local. Vista documental; el navegador de captura no representa una actualización ejecutada.}
+\end{figure}
+
+La autenticación Basic depende de WPA2 y no sustituye firma criptográfica. Una versión
+posterior debe añadir firma, política de downgrade y rollback confirmado.
+
+\chapter{Aplicación cloud VehicleSense}
+
+\section{Origen de las capturas}
+El frontend se ejecutó localmente en modo demostración. Una franja amarilla identifica
+que vehículos y mediciones son simulados. Las capturas sirven para documentar la
+arquitectura de información y los flujos de usuario; no prueban ingestión desde un bus.
+
+\section{Acceso}
+\VSfigure{cloud_login.png}{Pantalla de ingreso. En demo permite entrar sin credenciales reales; en producción utiliza JWT emitido por el backend.}
+
+El acceso separa autenticación de navegación. En producción, el backend aplica roles,
+duración de token y auditoría; el navegador nunca recibe credenciales MQTT de escritura.
+
+\section{Dashboard de flota}
+\VSfigure{cloud_dashboard.png}{Dashboard: indicadores de disponibilidad, mapa resumido, vehículos, tendencias y alertas. Datos simulados.}
+
+Su propósito es responder rápidamente cuántos vehículos están activos, cuál requiere
+atención y dónde se concentra la actividad. Las tarjetas deben definirse con reglas
+operativas explícitas: ``online'' por última muestra, ``en movimiento'' por velocidad y
+``alerta'' por evento no resuelto.
+
+\section{Mapa en vivo}
+\VSfigure{cloud_mapa.png}{Mapa en vivo con marcadores y panel de vehículos. Datos simulados.}
+
+La página permite seleccionar un vehículo y centrar su posición. La nube sí puede
+mostrar GPS porque existe autenticación y control de roles; se debe limitar precisión y
+retención según la política institucional.
+
+\section{Listado y detalle de vehículos}
+\VSfigure{cloud_vehiculos.png}{Listado de vehículos, estado, asignación y resumen de última telemetría. Datos simulados.}
+
+\VSfigure{cloud_vehiculo_detalle.png}{Detalle de un vehículo: estado, mapa/ruta, tendencias, telemetría, dispositivo y eventos. Datos simulados.}
+
+El detalle consolida las variables de un solo bus. Las gráficas distinguen muestras
+históricas y actualización en vivo; la sección de salud muestra firmware, conectividad
+y microSD. La validez del sensor debe acompañar cada valor y no ocultarse con un cero.
+
+\section{Alertas}
+\VSfigure{cloud_alertas.png}{Bandeja de alertas con severidad, vehículo, instante, ubicación y acciones. Datos simulados.}
+
+Las alertas requieren estado (nueva, reconocida, resuelta), responsable, comentario y
+trazabilidad. Un umbral no debe convertirse en alerta hasta definir ventana,
+histeresis, calidad del sensor y severidad. El frontend permite filtrar y reconocer;
+el backend conserva el cambio.
+
+\section{Viajes}
+\VSfigure{cloud_viajes.png}{Resumen de viajes por vehículo con distancia, duración y estado. Datos simulados.}
+
+Un viaje se deriva de posición, velocidad y reglas de inicio/fin. La ausencia de GPS
+debe producir un viaje incompleto, no una ruta interpolada presentada como exacta.
+
+\section{Analítica}
+\VSfigure{cloud_analitica.png}{Analítica de tendencias y distribución de variables. Datos simulados.}
+
+La página compara temperatura, humedad, velocidad y otras métricas en una ventana
+seleccionada. La interpretación debe mantener unidad, número de muestras, zona horaria
+y huecos de conectividad. Los datos simulados permiten validar el diseño, no conclusiones
+sobre la flota real.
+
+\section{Reportes}
+\VSfigure{cloud_reportes.png}{Exportación de telemetría CSV/JSON y alcance temporal. Datos simulados.}
+
+CSV facilita hojas de cálculo y JSON conserva estructura/flags. Toda exportación debe
+registrar filtros, zona horaria, esquema y vehículo; para grandes periodos conviene un
+trabajo asíncrono con enlace de descarga temporal.
+
+\section{Dispositivos}
+\VSfigure{cloud_dispositivos.png}{Inventario de dispositivos, firmware, última conexión y vehículo asignado. Datos simulados.}
+
+Esta pantalla separa identidad electrónica de identidad vehicular. Permite reemplazar
+un ESP32 sin alterar el historial del bus, además de observar versión, estado y última
+actividad. Las operaciones sensibles necesitan rol administrador.
+
+\section{Configuración}
+\VSfigure{cloud_configuracion.png}{Configuración de sesión, transporte y límites operativos. Modo demostración.}
+
+La configuración centraliza perfil del usuario y parámetros permitidos. Los secretos
+no se muestran ni se almacenan en el frontend. Cualquier cambio de límites debe quedar
+versionado y auditado.
+
+\chapter{Backend, base de datos y tiempo real}
+
+\section{Ingestión}
+Un consumidor MQTT persistente valida autenticidad, tema y esquema antes de insertar.
+Las tablas separan dispositivos, vehículos, telemetría, viajes, alertas y eventos de
+auditoría. Un índice por vehículo e instante soporta gráficas; una restricción única por
+identificador de muestra evita duplicados del replay.
+
+\section{API REST y WebSocket}
+REST atiende consultas históricas, inventario, alertas y exportaciones. WebSocket
+distribuye la última muestra a clientes autorizados. El backend no confía en el rol
+enviado por el navegador: lo deriva del token y aplica autorización por endpoint.
+
+\section{Tratamiento temporal}
+El dispositivo declara fuente de tiempo: NTP, GPS o none. El backend conserva tiempo
+de muestra y tiempo de recepción. Si solo existe uptime, no convierte arbitrariamente
+a UTC. Los dashboards deben indicar desactualización y zona horaria.
+
+\chapter{Despliegue y seguridad}
+
+\section{Prototipo y producción}
+Para prototipo, el stack puede ejecutarse con contenedores: broker, backend, PostgreSQL,
+frontend y proxy inverso. Un servidor persistente es preferible a funciones que se
+duermen para el consumidor MQTT. Vercel puede alojar el frontend estático, pero la
+ingestión histórica requiere un proceso siempre activo.
+
+\section{Controles mínimos}
+\begin{itemize}
+  \item TLS para MQTT y HTTPS para API/web.
+  \item ACL por dispositivo y credenciales rotables.
+  \item JWT corto, refresh controlado y roles backend.
+  \item Secretos en variables de entorno o NVS, nunca en Git ni JavaScript público.
+  \item Rate limit, validación de tamaño JSON y límites de consulta/exportación.
+  \item Copias de seguridad, logs sin contraseñas y auditoría de acciones.
+  \item Retención y minimización de GPS; no conservar audio crudo.
+\end{itemize}
+
+\section{Limitaciones actuales}
+\begin{itemize}
+  \item Las capturas cloud usan datos demo; falta campaña con dispositivos reales.
+  \item El dashboard local capturado usa JSON representativo.
+  \item SIM800L no garantiza TLS/SNI estable y 2G puede no estar disponible.
+  \item La cola offline es acotada; un corte prolongado puede agotar espacio.
+  \item Basic Auth OTA no proporciona firma de firmware.
+  \item GPS local debe revisarse contra el requisito de privacidad original.
+  \item Las alertas de movimiento y audio requieren validación de campo.
+\end{itemize}
+
+\chapter{Plan de prueba de integración}
+
+\begin{longtable}{p{3.2cm}p{6.0cm}p{5.5cm}}
+\toprule
+\textbf{Bloque} & \textbf{Prueba} & \textbf{Aceptación}\\
+\midrule
+\endhead
+Payload & Sensor inválido, NaN, todos inválidos, buffer límite & JSON parseable; flags presentes; números inválidos omitidos.\\
+microSD & 60 muestras, retiro, reinserción, reinicio & Archivo JSONL legible; loop continúa; estado refleja fallo.\\
+MQTT & TLS, ACL, QoS~1, broker reiniciado & PUBACK observado; reconexión; sin texto plano involuntario.\\
+Offline & Cortar red 10 min y restablecer & Cola crece, replay se confirma y no duplica en backend.\\
+Web local & AP sin Internet, APIs, móvil, sensor ausente & Interfaz responsive, sin bloqueo y estados honestos.\\
+OTA & Credencial incorrecta, bin inválido, bin válido & 401/rechazo; reinicio solo en éxito; USB recupera.\\
+Backend & Duplicado, esquema inválido, usuario sin rol & Deduplicación, 4xx y autorización correcta.\\
+Cloud & REST, WebSocket, filtros, exportación & Datos coherentes, zona horaria y modo demo visibles.\\
+Soak & Operación 60 min con fallos inducidos & Sin watchdog; sensores y respaldo continúan.\\
+Ruta & Recorrido controlado con referencia & Posición, viaje y eventos comparables con evidencia externa.\\
+\bottomrule
+\end{longtable}
+
+\chapter{Conclusiones}
+La aplicación completa convierte el prototipo sensorial en un sistema observable: el
+dispositivo conserva datos cuando falla la red, MQTT desacopla la ingestión y la
+plataforma presenta estado operativo e histórico. La web local resuelve diagnóstico y
+OTA sin depender de Internet; la web cloud concentra GPS, rutas, gráficas, alertas y
+administración.
+
+El diseño visual está avanzado y el software cuenta con modo demostración, pero aún
+debe conectarse a una campaña física documentada. La siguiente evidencia clave es una
+integración de 60 minutos, corte/recuperación de red, replay desde microSD y recorrido
+real. También debe resolverse la exposición de GPS en la API local para que la
+implementación coincida con el requisito de privacidad.
+
+\begin{thebibliography}{9}
+\bibitem{mqtt} OASIS. \emph{MQTT Version 3.1.1, OASIS Standard}.
+\url{https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html}
+
+\bibitem{pio} PlatformIO. \emph{Espressif 32: partition tables and build options}.
+\url{https://docs.platformio.org/en/latest/platforms/espressif32.html}
+
+\bibitem{fastapi} FastAPI. \emph{Official documentation}.
+\url{https://fastapi.tiangolo.com/}
+
+\bibitem{postgres} PostgreSQL Global Development Group. \emph{PostgreSQL documentation}.
+\url{https://www.postgresql.org/docs/}
+\end{thebibliography}
+
+\end{document}

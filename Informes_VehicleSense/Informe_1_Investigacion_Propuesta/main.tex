@@ -1,0 +1,386 @@
+\documentclass[11pt,a4paper,oneside]{report}
+\input{../common/preamble.tex}
+\input{../common/datos.tex}
+
+\begin{document}
+\VScover
+  {Investigación y propuesta técnica inicial}
+  {Sistema IoT multisensorial para monitoreo de vehículos}
+  {Informe técnico I}
+
+\pagenumbering{roman}
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+Este informe plantea, desde la fase inicial del proyecto, cómo diseñar un dispositivo
+embarcado capaz de observar el ambiente, el movimiento y la ubicación de vehículos.
+La propuesta parte de un ESP32 y combina sensores de
+temperatura y humedad, iluminación, presión, aceleración, velocidad angular, campo
+magnético, posición y nivel acústico relativo. Los datos se validan en el borde,
+se respaldan localmente y se transmiten mediante MQTT hacia una plataforma web.
+
+La finalidad no es reemplazar sistemas certificados del vehículo, sino construir un
+prototipo académico extensible para estudiar condiciones de operación, calidad del
+entorno, estado del vehículo y comportamiento del trayecto. Se propone una
+arquitectura modular en PlatformIO, pruebas separadas por componente y un contrato de
+telemetría versionado. La solución prioriza continuidad: un sensor o una conexión que
+falle no debe detener el resto del dispositivo ni producir valores ficticios.
+
+\begin{vsidea}[title={Resultado de la investigación}]
+La alternativa recomendada para la primera campaña es un perfil WiFi sobre ESP32,
+MQTT con TLS, microSD y página local de diagnóstico. El SIM800L se conserva como
+línea experimental, pero no como transporte principal, debido a cobertura 2G,
+alimentación por picos y compatibilidad TLS. La arquitectura permite migrar después a
+un módem LTE sin reescribir sensores ni telemetría.
+\end{vsidea}
+
+\paragraph{Repositorio del proyecto.}
+El código fuente y los recursos técnicos de VehicleSense se encuentran disponibles en
+\href{https://github.com/PatricioV1207/Multisensory-Device}{github.com/PatricioV1207/Multisensory-Device}.
+
+\tableofcontents
+\listoffigures
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Planteamiento del proyecto}
+
+\section{Contexto}
+El monitoreo integral de vehículos necesita información que normalmente se encuentra
+dispersa: posición, condiciones ambientales interiores,
+movimiento, eventos bruscos, conectividad y estado del propio dispositivo. La
+observación manual sirve para ensayos puntuales, pero no para comparar rutas, horarios
+o tendencias. Un nodo IoT embarcado permite transformar esas variables físicas en una
+serie temporal consultable.
+
+El proyecto VehicleSense se formula como un prototipo de instrumentación, no como un
+sistema de seguridad funcional. Sus resultados pueden apoyar investigación,
+mantenimiento exploratorio y visualización operacional; cualquier decisión crítica
+debe contrastarse con instrumentos calibrados y con los sistemas homologados del vehículo.
+
+\section{Pregunta de investigación}
+\begin{vsidea}
+¿Cómo construir, con componentes accesibles y software modular, un dispositivo que
+adquiera variables heterogéneas a bordo de un vehículo, detecte datos inválidos,
+mantenga un respaldo local y publique telemetría útil sin bloquearse ante fallos
+parciales?
+\end{vsidea}
+
+\section{Objetivos}
+\subsection{Objetivo general}
+Diseñar e implementar una arquitectura IoT multisensorial extensible para monitorear
+vehículos mediante adquisición local, validación, almacenamiento
+y comunicación MQTT.
+
+\subsection{Objetivos específicos}
+\begin{itemize}
+  \item Seleccionar sensores e interfaces de comunicación compatibles con el ESP32.
+  \item Definir magnitudes, unidades, intervalos y criterios de validez.
+  \item Separar control, sensores, almacenamiento, red y presentación en módulos.
+  \item Diseñar un payload JSON versionado que omita números inválidos.
+  \item Proponer diagnóstico local, actualización OTA y plataforma cloud.
+  \item Elaborar una metodología reproducible de calibración e integración.
+\end{itemize}
+
+\section{Alcance inicial y exclusiones}
+El prototipo medirá variables ambientales y dinámicas con componentes de bajo costo.
+No accederá al CAN del vehículo, no estimará el estado de carga de la batería y no
+emitirá alarmas de seguridad certificadas. Tampoco se considera en la primera fase una
+calibración metrológica trazable. El audio se procesará en características agregadas;
+no se almacenará voz cruda.
+
+\chapter{Fundamentos y utilidad esperada}
+
+\section{Cadena de valor del dato}
+Una lectura aislada no es todavía información. El valor aparece cuando se conoce su
+unidad, instante, procedencia y calidad. La cadena propuesta es:
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 7mm,
+box/.style={draw=VSLight,fill=VSSoft,rounded corners=2mm,minimum height=11mm,
+minimum width=25mm,align=center,font=\small},
+arr/.style={-{Latex[length=2mm]},thick,color=VSTeal}]
+\node[box] (sense) {Fenómeno\\físico};
+\node[box,right=of sense] (acq) {Adquisición\\no bloqueante};
+\node[box,right=of acq] (val) {Validación\\y antigüedad};
+\node[box,right=of val] (json) {JSON\\versionado};
+\node[box,below=of val] (sd) {Respaldo\\microSD};
+\node[box,right=of json] (mqtt) {MQTT\\seguro};
+\node[box,right=of mqtt] (web) {API y\\visualización};
+\draw[arr] (sense)--(acq); \draw[arr] (acq)--(val); \draw[arr] (val)--(json);
+\draw[arr] (json)--(mqtt); \draw[arr] (mqtt)--(web); \draw[arr] (json)--(sd);
+\end{tikzpicture}
+}
+\caption{Cadena propuesta para convertir una medición en telemetría utilizable.}
+\end{figure}
+
+\section{Por qué utilizar MQTT}
+MQTT es un protocolo de publicación/suscripción liviano y apropiado para entornos
+restringidos \cite{mqtt}. El dispositivo no necesita conocer a todos los consumidores:
+publica en temas definidos y un broker distribuye los mensajes. Esta separación
+permite que el dashboard, el almacenamiento histórico y futuras reglas de alerta
+evolucionen sin cambiar el firmware de adquisición.
+
+Para la telemetría se propone QoS~1 cuando el cliente utilizado lo permita, con
+identificador de mensaje y confirmación PUBACK. La microSD complementa, pero no
+sustituye, esta garantía. TLS y credenciales por dispositivo son requisitos del
+despliegue; MQTT en texto plano se limita al laboratorio.
+
+\section{Qué se espera obtener}
+\begin{itemize}
+  \item Series de temperatura, humedad, iluminación y presión dentro del vehículo.
+  \item Trayectorias, velocidad y calidad de fix del GPS.
+  \item Magnitudes de aceleración, giro y campo magnético para explorar eventos.
+  \item Evidencia de continuidad, reinicios, pérdida de red y recuperación.
+  \item Datos exportables para informes, gráficas y análisis posteriores.
+\end{itemize}
+
+La IMU no identifica por sí sola una maniobra peligrosa. Un evento como frenado brusco
+requiere definir el eje longitudinal, filtrar vibración, estimar el marco del vehículo
+y validar umbrales con recorridos controlados. Del mismo modo, el nivel del micrófono
+en dBFS es relativo y no equivale a dB SPL sin calibración acústica.
+
+\chapter{Selección de hardware}
+
+\section{Controlador ESP32}
+El ESP32 integra WiFi de 2,4~GHz, múltiples UART, SPI, I2C e I2S, además de recursos
+de seguridad y memoria adecuados para un nodo IoT \cite{esp32}. La placa DevKit V1
+facilita programación USB y depuración. Sus limitaciones más relevantes son memoria
+finita, pines de arranque y la necesidad de evitar operaciones largas dentro del loop.
+
+\section{Sensores propuestos}
+\begin{longtable}{p{3.2cm}p{3.3cm}p{3.4cm}p{4.2cm}}
+\toprule
+\textbf{Módulo} & \textbf{Magnitud} & \textbf{Interfaz} & \textbf{Justificación y cautela}\\
+\midrule
+\endhead
+DHT11 & Temperatura y humedad & GPIO27, señal digital & Económico y suficiente para prototipo; baja resolución y lectura máxima cada 2~s.\\
+NEO-6M & Posición, velocidad, altitud, satélites & UART2, GPIO32/33 & NMEA ampliamente soportado; necesita cielo visible y puede tardar en fijar posición \cite{neo6}.\\
+ADXL345 & Aceleración triaxial & I2C, dirección típica 0x53 & Permite medir gravedad y movimiento; requiere calibración de offset y escala \cite{adxl}.\\
+L3G4200D & Velocidad angular triaxial & I2C, 0x69/0x68 & Complementa al acelerómetro; deriva y sesgo impiden obtener orientación absoluta sin fusión.\\
+HMC5883L & Campo magnético & I2C, 0x1E & Útil para rumbo experimental; sensible a metal, corriente y clones QMC5883L.\\
+BMP180 & Presión y temperatura interna & I2C, 0x77 & Permite estimar altitud; la presión de referencia cambia con el clima.\\
+BH1750 & Iluminancia & I2C, 0x23/0x5C & Entrega lux directamente; la geometría, sombra y saturación afectan la interpretación.\\
+INMP441 & Señal acústica digital & I2S & Evita entrada analógica; se propone extraer características y descartar audio crudo.\\
+microSD & Respaldo local & SPI, GPIO18/19/23/5 & Conserva muestras durante cortes; requiere FAT y manejo de extracción/energía.\\
+\bottomrule
+\end{longtable}
+
+El ADXL345 admite rangos seleccionables y salida digital por I2C/SPI
+\cite{adxl}. El NEO-6 ofrece UART y otras interfaces, pero el breakout debe verificarse:
+la tensión de entrada de la placa no siempre coincide con la del chip \cite{neo6}.
+
+\section{Comunicación primaria y alternativa}
+El perfil recomendado utiliza WiFi porque simplifica TLS, OTA y pruebas de laboratorio.
+El SIM800L se evalúa como experimento de conectividad GPRS, no como requisito de la
+primera versión. Sus riesgos son cobertura 2G, picos de corriente cercanos a 2~A,
+latencia de comandos AT y soporte TLS dependiente del firmware. La interfaz de red se
+diseña para aceptar después un módem LTE como SIM7600.
+
+\section{Mapa de pines propuesto}
+\begin{table}[H]
+\centering
+\caption{Asignación de pines para el prototipo extendido.}
+\begin{tabularx}{\textwidth}{@{}l l l Y@{}}
+\toprule
+\textbf{Bloque} & \textbf{Señal} & \textbf{GPIO} & \textbf{Observación}\\
+\midrule
+DHT11 & DATA & 27 & Pull-up de 4,7--10~k$\Omega$ si el módulo no lo incluye.\\
+GPS & RX2 / TX2 & 32 / 33 & GPS TX hacia GPIO32; 9600 baud.\\
+I2C & SDA / SCL & 21 / 22 & Interfaz compartida por GY-801 y BH1750.\\
+microSD & SCK/MISO/MOSI/CS & 18/19/23/5 & CS alto durante arranque; GPIO5 es strapping.\\
+INMP441 & SCK/WS/SD & Según configuración & Interfaz I2S independiente; documentar cableado final.\\
+SIM800L experimental & RX1 / TX1 & 16 / 17 & Fuente externa estable y tierra común.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Arquitectura propuesta}
+
+\section{Capas del firmware}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+layer/.style={draw=VSBlue,fill=VSSoft,rounded corners=2mm,minimum width=13.5cm,
+minimum height=12mm,align=center},node distance=4mm]
+\node[layer] (app) {\textbf{AppController} --- ciclo de vida, planificación y snapshots};
+\node[layer,below=of app] (domain) {Telemetría, validación, estados y esquema versionado};
+\node[layer,below=of domain] (modules) {Sensores \quad Almacenamiento \quad WiFi/MQTT \quad Web/OTA};
+\node[layer,below=of modules] (hal) {Arduino Framework: GPIO, I2C, SPI, UART, I2S, NVS};
+\draw[-{Latex},thick,VSTeal] (app)--(domain);
+\draw[-{Latex},thick,VSTeal] (domain)--(modules);
+\draw[-{Latex},thick,VSTeal] (modules)--(hal);
+\end{tikzpicture}
+\caption{Separación por responsabilidades propuesta para el firmware.}
+\end{figure}
+
+Cada sensor expone un contrato equivalente a \texttt{begin()},
+\texttt{update(nowMs)}, \texttt{isValid()} y \texttt{getData()}. No conoce JSON,
+MQTT ni la interfaz web. La telemetría trabaja con datos tipados y el transporte
+recibe un documento ya validado. Así, cambiar de WiFi a LTE no afecta el driver del
+acelerómetro.
+
+\section{Organización del repositorio}
+\begin{lstlisting}
+include/                 config, pines y secretos de ejemplo
+src/app/                 controlador principal
+src/sensors/             DHT11, GPS, BH1750, audio y GY-801
+src/storage/             microSD y cola offline
+src/communication/       WiFi, MQTT y modem celular
+src/telemetry/           datos, validacion y JSON
+src/web/                 dashboard local, API y OTA
+src/diagnostics/         firmware de prueba por environment
+test/                    pruebas Unity nativas
+docs/                    cableado, arquitectura y procedimientos
+\end{lstlisting}
+
+\section{Planificación temporal}
+El GPS se procesa en cada iteración para no perder caracteres. IMU y audio pueden
+requerir intervalos cortos; DHT11 no debe leerse más rápido que 2~s. La telemetría se
+publica a un intervalo superior, por ejemplo 10~s, con una instantánea coherente. Las
+reconexiones usan backoff y \texttt{millis()}, sin \texttt{delay()} prolongado.
+
+\section{Contrato de telemetría}
+El payload incluirá versión de esquema, identificadores, tiempo, valores y banderas de
+validez. Los datos NaN, infinitos, obsoletos o asociados con una bandera falsa se
+omiten. Un ejemplo reducido es:
+
+\begin{lstlisting}[language={C++}]
+{
+  "schema_version": 3,
+  "device_id": "esp32-devkit-01",
+  "vehicle_id": "vehiculo-prototipo-01",
+  "uptime_ms": 123456,
+  "temperature_c": 27.4,
+  "dht_valid": true,
+  "gps_valid": false,
+  "accel_magnitude_mps2": 9.79,
+  "sd_valid": true,
+  "mqtt_connected": true
+}
+\end{lstlisting}
+
+No se debe inventar tiempo Unix: hasta sincronizar NTP o GPS se informa uptime y
+fuente temporal. Tampoco se asigna cero a una lectura ausente, porque cero podría ser
+un valor físicamente válido.
+
+\chapter{Plataforma de visualización propuesta}
+
+\section{Página local}
+El ESP32 ofrecerá un Access Point y una página sin dependencias externas. Su propósito
+es diagnóstico a corta distancia: lecturas básicas, estado de microSD, WiFi, MQTT,
+uptime y actualización OTA. La sección administrativa utilizará autenticación
+adicional. La primera carga seguirá realizándose por USB.
+
+La web local no reemplaza la plataforma central. Mantiene poca historia y su acceso
+depende de proximidad al vehículo. Como criterio de privacidad, la propuesta inicial
+evita mostrar un mapa local; la posición se reserva al sistema cloud autenticado.
+
+\section{Plataforma cloud}
+Se propone un broker MQTT, un consumidor backend persistente, PostgreSQL y una SPA.
+El frontend consultará API REST para historia y WebSocket para actualización en vivo.
+Las pantallas previstas son dashboard, mapa, vehículos, alertas, viajes, analítica,
+reportes, dispositivos y configuración.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=7mm and 8mm,
+box/.style={draw=VSLight,fill=VSSoft,rounded corners=2mm,minimum height=11mm,
+minimum width=28mm,align=center,font=\small},arr/.style={-{Latex},thick,VSTeal}]
+\node[box] (esp) {ESP32\\VehicleSense};
+\node[box,right=of esp] (broker) {Broker\\MQTT/TLS};
+\node[box,right=of broker] (back) {Backend\\consumidor};
+\node[box,above right=of back] (db) {PostgreSQL\\histórico};
+\node[box,below right=of back] (api) {REST +\\WebSocket};
+\node[box,right=of api] (spa) {Frontend\\web};
+\draw[arr] (esp)--node[above,font=\scriptsize]{publica}(broker);
+\draw[arr] (broker)--(back); \draw[arr] (back)--(db); \draw[arr] (back)--(api);
+\draw[arr] (db)--(api); \draw[arr] (api)--(spa);
+\end{tikzpicture}
+}
+\caption{Arquitectura cloud recomendada para separar ingestión, persistencia y presentación.}
+\end{figure}
+
+\chapter{Metodología de desarrollo y pruebas}
+
+\section{Entornos PlatformIO}
+La estrategia es compilar firmware especializado que no dependa de todo el hardware.
+Se prevén entornos para DHT11, GPS, scanner I2C, cada chip del GY-801, BH1750,
+microSD, WiFi, MQTT, audio, web local, OTA e integración completa. Las pruebas de
+serialización y validación se ejecutan también como Unity nativo.
+
+\section{Fases}
+\begin{enumerate}
+  \item \textbf{Inspección eléctrica:} tensiones, tierras, fuente y continuidad.
+  \item \textbf{Detección:} Serial, UART, scanner I2C y montaje SPI.
+  \item \textbf{Lectura individual:} rango, finitud, respuesta al estímulo y fallo.
+  \item \textbf{Calibración:} acelerómetro, barómetro y criterios para magnetómetro.
+  \item \textbf{Integración local:} payload, microSD, AP, API y OTA.
+  \item \textbf{Comunicación:} TLS, ACL, QoS, reconexión y cola offline.
+  \item \textbf{Ensayo vehicular:} recorrido controlado, repetibilidad y comparación.
+\end{enumerate}
+
+\section{Criterios de aceptación iniciales}
+\begin{itemize}
+  \item Todos los entornos compilan y el \texttt{main.cpp} conserva delegación mínima.
+  \item La desconexión de un sensor no reinicia el equipo.
+  \item El JSON nunca contiene NaN ni coordenadas ficticias.
+  \item El respaldo continúa cuando MQTT no está disponible.
+  \item La red y el broker se recuperan automáticamente.
+  \item Credenciales reales quedan fuera del repositorio.
+  \item Las pantallas distinguen datos reales, simulados y obsoletos.
+\end{itemize}
+
+\chapter{Riesgos y decisiones abiertas}
+
+\begin{longtable}{p{4.1cm}p{5.0cm}p{5.0cm}}
+\toprule
+\textbf{Riesgo} & \textbf{Impacto} & \textbf{Tratamiento propuesto}\\
+\midrule
+\endhead
+Fuente y ruido eléctrico del vehículo & Reinicios, lecturas I2C erráticas o daño & Regulación automotriz, protección, filtrado y pruebas antes de instalación.\\
+Clones del GY-801 & Dirección o driver incompatible & Scanner más verificación de registros de identidad; validez por subchip.\\
+GPS bajo techo & Flujo NMEA sin fix & Diferenciar UART activo de posición válida; ensayo exterior.\\
+Altitud BMP180 & Error por clima y referencia & Calibración reciente con altitud conocida; registrar presión de referencia.\\
+Perturbación magnética & Rumbo incorrecto & Calibrar dentro del montaje final o excluir rumbo de decisiones.\\
+Pérdida de conectividad & Huecos en la nube & JSONL local y cola acotada con replay.\\
+Seguridad de OTA/MQTT & Acceso o firmware no autorizado & WPA2, Basic Auth local, TLS, ACL, USB de recuperación; firmas en roadmap.\\
+Privacidad GPS/audio & Exposición de ruta o conversaciones & Control de roles, retención limitada y solo características acústicas.\\
+\bottomrule
+\end{longtable}
+
+\chapter{Conclusiones de la propuesta}
+VehicleSense es viable como plataforma académica si se construye por capas y se
+documenta la calidad de cada dato. La investigación conduce a una implementación
+inicial basada en ESP32, sensores digitales, microSD y WiFi/MQTT seguro. Esta opción
+reduce incertidumbre antes de introducir una red celular.
+
+El valor principal del proyecto no reside en acumular sensores, sino en asegurar que
+cada medición tenga unidad, validez, contexto temporal y procedimiento de verificación.
+La siguiente fase debe registrar calibraciones y pruebas físicas sin confundir salidas
+de ejemplo con evidencia experimental. Después se integrarán almacenamiento,
+comunicación y visualización de extremo a extremo.
+
+\begin{thebibliography}{9}
+\bibitem{esp32} Espressif Systems. \emph{ESP32 Series Datasheet, versión 5.2}.
+\url{https://documentation.espressif.com/esp32_datasheet_en.pdf}
+
+\bibitem{neo6} u-blox. \emph{NEO-6 Data Sheet, GPS.G6-HW-09005}.
+\url{https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_%28GPS.G6-HW-09005%29.pdf}
+
+\bibitem{adxl} Analog Devices. \emph{ADXL345: 3-Axis Digital Accelerometer Data Sheet}.
+\url{https://www.analog.com/media/en/technical-documentation/data-sheets/adxl345.pdf}
+
+\bibitem{mqtt} OASIS. \emph{MQTT Version 3.1.1, OASIS Standard}.
+\url{https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html}
+
+\bibitem{pio} PlatformIO. \emph{Espressif 32 development platform}.
+\url{https://docs.platformio.org/en/latest/platforms/espressif32.html}
+
+\bibitem{arduinojson} ArduinoJson. \emph{Documentation and serialization model}.
+\url{https://arduinojson.org/}
+\end{thebibliography}
+
+\end{document}
