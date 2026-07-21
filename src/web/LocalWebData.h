@@ -6,10 +6,14 @@
 
 struct LocalWebData {
   const char* deviceId = "";
+  const char* vehicleId = "";
   const char* firmwareVersion = "";
+  const char* timeSource = "none";
+  bool simulated = false;
   uint64_t uptimeMs = 0;
   DHT11Data dht;
   LightData light;
+  GPSData gps;
   AccelData accel;
   GyroData gyro;
   MagData mag;
@@ -17,6 +21,10 @@ struct LocalWebData {
   bool imuValid = false;
   StorageStatus storage;
   CellularStatus cellular;
+  WiFiRuntimeStatus wifi;
   MqttRuntimeStatus mqtt;
   OtaStatus ota;
+  OfflineDeliveryStatus offline;
+  AcousticData acoustic;
+  bool alertsAvailable = false;
 };

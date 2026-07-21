@@ -40,6 +40,15 @@ struct MqttRuntimeStatus {
   uint32_t lastAcknowledgedToken = 0;
 };
 
+struct WiFiRuntimeStatus {
+  bool configured = false;
+  bool connected = false;
+  bool accessPointRunning = false;
+  int32_t rssiDbm = 0;
+  char stationIp[16] = {0};
+  char accessPointIp[16] = {0};
+};
+
 struct OtaStatus {
   bool enabled = false;
   bool inProgress = false;

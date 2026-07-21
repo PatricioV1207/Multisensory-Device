@@ -47,7 +47,7 @@
 #define MQTT_TEST_TOPIC "buses/prototype/diagnostics"
 
 // Local WPA2 access point and separate HTTP Basic administrator credentials.
-#define LOCAL_AP_SSID "BusIoT-Prototype"
+#define LOCAL_AP_SSID "VehicleSense-Local"
 #define LOCAL_AP_PASSWORD "YOUR_AP_PASSWORD_MIN_8_CHARS"
 #define LOCAL_ADMIN_USERNAME "admin"
 #define LOCAL_ADMIN_PASSWORD "YOUR_ADMIN_PASSWORD"

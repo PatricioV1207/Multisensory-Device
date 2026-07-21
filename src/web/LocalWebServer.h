@@ -8,7 +8,7 @@
 
 class LocalWebServer {
  public:
-  bool begin();
+  bool begin(bool preserveStation = false);
   void update(uint32_t nowMs);
   void setData(const LocalWebData& data);
   bool isRunning() const;

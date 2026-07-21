@@ -53,11 +53,18 @@ void AppController::begin() {
   }
 #elif APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   _wifi.begin();
+  _light.begin();
+  _storage.begin();
+  _web.begin(true);
   if (_identity.isValid()) {
     _secureMqtt.begin(_identity.bootId());
   }
 #endif
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _mqttStatus.configured = _secureMqtt.isConfigured();
+#else
   _mqttStatus.configured = _mqtt.isConfigured();
+#endif
   Logger::info("BOOT", "Initialization complete; failures are non-fatal");
 }
 
@@ -112,10 +119,18 @@ void AppController::update() {
     refreshLocalWebData(nowMs);
   }
 #elif APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _light.update(nowMs);
+  _storage.update(nowMs);
   _wifi.update(nowMs);
   _time.update(nowMs, _wifi.isConnected(), _gps.getData());
   _secureMqtt.update(nowMs, _wifi.isConnected() && _time.isValid());
   processVehicleSenseMqtt(nowMs);
+  _web.update(nowMs);
+  if (static_cast<uint32_t>(nowMs - _lastWebSnapshotMs) >=
+      LOCAL_WEB_SNAPSHOT_INTERVAL_MS) {
+    _lastWebSnapshotMs = nowMs;
+    refreshLocalWebData(nowMs);
+  }
 #endif
 
   if (static_cast<uint32_t>(nowMs - _lastTelemetryMs) >= TELEMETRY_INTERVAL_MS) {
@@ -178,7 +193,8 @@ void AppController::publishTelemetry(uint32_t nowMs) {
   Logger::info("JSON", String(_payload));
   Logger::debug("JSON", "Payload bytes=" + String(written));
 
-#if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR
+#if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR || \
+    APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   if (_web.otaInProgress()) {
     Logger::warn("OTA", "Storage and MQTT paused during firmware upload");
     return;
@@ -299,14 +315,20 @@ void AppController::acknowledgeUnsupportedCommand(const char* commandId,
 }
 
 void AppController::refreshLocalWebData(uint32_t nowMs) {
-#if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR
+#if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR || \
+    APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   buildSnapshot(nowMs);
   LocalWebData local;
   local.deviceId = DEVICE_ID;
+  local.vehicleId = VEHICLE_ID;
   local.firmwareVersion = FIRMWARE_VERSION;
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  local.timeSource = _time.sourceName();
+#endif
   local.uptimeMs = _telemetry.uptimeMs;
   local.dht = _telemetry.dht;
   local.light = _telemetry.light;
+  local.gps = _telemetry.gps;
   local.accel = _telemetry.gy801.accel;
   local.gyro = _telemetry.gy801.gyro;
   local.mag = _telemetry.gy801.mag;
@@ -314,8 +336,34 @@ void AppController::refreshLocalWebData(uint32_t nowMs) {
   local.imuValid = _telemetry.gy801.imuValid;
   local.storage = _storage.getStatus();
   local.cellular = _modem.getStatus();
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  local.wifi.configured = _wifi.isConfigured();
+  local.wifi.connected = _wifi.isConnected();
+  local.wifi.accessPointRunning = _web.isRunning();
+  local.wifi.rssiDbm = _wifi.rssi();
+  const String stationIp = _wifi.localIp();
+  const String accessPointIp = _web.localIp();
+  if (_wifi.isConnected()) {
+    stationIp.toCharArray(local.wifi.stationIp,
+                          sizeof(local.wifi.stationIp));
+  }
+  if (_web.isRunning()) {
+    accessPointIp.toCharArray(local.wifi.accessPointIp,
+                              sizeof(local.wifi.accessPointIp));
+  }
+#else
+  local.wifi.accessPointRunning = _web.isRunning();
+  const String accessPointIp = _web.localIp();
+  if (_web.isRunning()) {
+    accessPointIp.toCharArray(local.wifi.accessPointIp,
+                              sizeof(local.wifi.accessPointIp));
+  }
+#endif
   local.mqtt = _mqttStatus;
   local.ota = _web.getOtaStatus();
+  local.offline = _telemetry.offline;
+  local.acoustic = _telemetry.acoustic;
+  local.alertsAvailable = false;
   _web.setData(local);
 #else
   (void)nowMs;

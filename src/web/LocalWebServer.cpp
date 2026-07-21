@@ -14,14 +14,14 @@ bool hasRealValue(const char* value) {
 }
 }
 
-bool LocalWebServer::begin() {
+bool LocalWebServer::begin(bool preserveStation) {
   if (!hasRealValue(LOCAL_AP_SSID) || !hasRealValue(LOCAL_AP_PASSWORD) ||
       strlen(LOCAL_AP_PASSWORD) < 8U) {
     Logger::error("WEB", "AP credentials missing or password shorter than 8 chars");
     return false;
   }
   WiFi.persistent(false);
-  WiFi.mode(WIFI_AP);
+  WiFi.mode(preserveStation ? WIFI_AP_STA : WIFI_AP);
   if (!WiFi.softAP(LOCAL_AP_SSID, LOCAL_AP_PASSWORD)) {
     Logger::error("WEB", "Could not start local access point");
     return false;

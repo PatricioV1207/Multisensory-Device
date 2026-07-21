@@ -294,7 +294,9 @@ void ModuleTestRunner::publishMqttTest(uint32_t nowMs) {
 
 void ModuleTestRunner::updateLocalWebMock(uint32_t nowMs) {
   _localWebData.deviceId = DEVICE_ID;
+  _localWebData.vehicleId = VEHICLE_ID;
   _localWebData.firmwareVersion = FIRMWARE_VERSION;
+  _localWebData.simulated = true;
   _localWebData.uptimeMs = nowMs;
   _localWebData.dht.temperatureC = 25.4F;
   _localWebData.dht.humidityPercent = 61.0F;
@@ -303,6 +305,15 @@ void ModuleTestRunner::updateLocalWebMock(uint32_t nowMs) {
   _localWebData.light.lux = 340.0F;
   _localWebData.light.valid = true;
   _localWebData.light.updatedAtMs = nowMs;
+  _localWebData.gps.latitude = -2.189412;
+  _localWebData.gps.longitude = -79.889066;
+  _localWebData.gps.altitudeM = 12.4F;
+  _localWebData.gps.speedKmh = 36.2F;
+  _localWebData.gps.satellites = 10;
+  _localWebData.gps.hdop = 0.9F;
+  _localWebData.gps.valid = true;
+  _localWebData.gps.streamSeen = true;
+  _localWebData.gps.charsProcessed = 5000;
   _localWebData.accel.x = 0.1F;
   _localWebData.accel.y = 0.2F;
   _localWebData.accel.z = 9.8F;
@@ -337,6 +348,13 @@ void ModuleTestRunner::updateLocalWebMock(uint32_t nowMs) {
   _localWebData.mqtt.connected = true;
   _localWebData.mqtt.lastPublishOk = true;
   _localWebData.mqtt.lastPublishSuccessMs = nowMs;
+  _localWebData.mqtt.lastPublishAckMs = nowMs;
+  _localWebData.wifi.accessPointRunning = _web.isRunning();
+  const String accessPointIp = _web.localIp();
+  if (_web.isRunning()) {
+    accessPointIp.toCharArray(_localWebData.wifi.accessPointIp,
+                              sizeof(_localWebData.wifi.accessPointIp));
+  }
   _localWebData.ota = _web.getOtaStatus();
   _web.setData(_localWebData);
 }
