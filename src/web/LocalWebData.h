@@ -26,5 +26,6 @@ struct LocalWebData {
   OtaStatus ota;
   OfflineDeliveryStatus offline;
   AcousticData acoustic;
+  AcousticAlertStatus acousticAlert;
   bool alertsAvailable = false;
 };

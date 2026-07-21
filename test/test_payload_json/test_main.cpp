@@ -160,6 +160,34 @@ void test_v3_rejects_missing_vehicle_or_persistent_identity() {
   data.bootId = 0;
   TEST_ASSERT_FALSE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
 }
+
+void test_v3_acoustic_summary_is_bounded_and_omitted_when_invalid() {
+  TelemetryData data = vehicleSenseSample();
+  data.acoustic.microphoneValid = true;
+  data.acoustic.analysisValid = true;
+  data.acoustic.relativeLevelDbfs = -31.8F;
+  data.acoustic.peakDbfs = -8.2F;
+  data.acoustic.category = "traffic";
+  data.acoustic.confidence = 0.78F;
+  data.acoustic.classifierVersion = "heuristic-1";
+  char output[2048];
+  TEST_ASSERT_TRUE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
+  JsonDocument doc;
+  TEST_ASSERT_FALSE(deserializeJson(doc, output));
+  TEST_ASSERT_TRUE(doc["mic_valid"].as<bool>());
+  TEST_ASSERT_TRUE(doc["acoustic_valid"].as<bool>());
+  TEST_ASSERT_EQUAL_STRING("traffic", doc["acoustic_category"]);
+  TEST_ASSERT_FLOAT_WITHIN(
+      0.01F, -31.8F, doc["acoustic_relative_level_dbfs"].as<float>());
+
+  data.acoustic.category = "invented";
+  TEST_ASSERT_TRUE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
+  TEST_ASSERT_FALSE(deserializeJson(doc, output));
+  TEST_ASSERT_TRUE(doc["mic_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["acoustic_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["acoustic_category"].is<const char*>());
+  TEST_ASSERT_FALSE(doc["acoustic_confidence"].is<float>());
+}
 }  // namespace
 
 int main(int, char**) {
@@ -170,5 +198,6 @@ int main(int, char**) {
   RUN_TEST(test_v3_payload_has_identity_time_and_transport_state);
   RUN_TEST(test_v3_omits_untrusted_time_and_invalid_values);
   RUN_TEST(test_v3_rejects_missing_vehicle_or_persistent_identity);
+  RUN_TEST(test_v3_acoustic_summary_is_bounded_and_omitted_when_invalid);
   return UNITY_END();
 }

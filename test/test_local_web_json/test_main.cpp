@@ -130,6 +130,11 @@ void test_acoustic_values_are_relative_and_omitted_when_invalid() {
   data.acoustic.confidence = 0.78F;
   data.acoustic.category = "traffic";
   data.acoustic.clipping = false;
+  data.acousticAlert.active = true;
+  data.acousticAlert.eventType = "acoustic_traffic";
+  data.acousticAlert.severity = "medium";
+  data.acousticAlert.confidence = 0.78F;
+  data.acousticAlert.durationMs = 9000U;
   char output[1536];
   TEST_ASSERT_TRUE(LocalWebJsonBuilder::buildBasicTelemetry(
       data, output, sizeof(output)));
@@ -139,6 +144,11 @@ void test_acoustic_values_are_relative_and_omitted_when_invalid() {
   TEST_ASSERT_FLOAT_WITHIN(
       0.01F, -31.8F, document["acoustic_relative_level_dbfs"].as<float>());
   TEST_ASSERT_FALSE(document["noise_db_spl"].is<float>());
+  TEST_ASSERT_TRUE(document["acoustic_alert_active"].as<bool>());
+  TEST_ASSERT_EQUAL_STRING("acoustic_traffic",
+                           document["acoustic_alert_type"]);
+  TEST_ASSERT_EQUAL(9000U,
+                    document["acoustic_alert_duration_ms"].as<unsigned>());
 
   data.acoustic.analysisValid = false;
   TEST_ASSERT_TRUE(LocalWebJsonBuilder::buildBasicTelemetry(

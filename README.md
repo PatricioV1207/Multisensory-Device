@@ -26,7 +26,7 @@ banderas de estado explícitas.
 - Módulo microSD SPI.
 - SIM800L V2 con fuente independiente adecuada.
 - WiFi integrado del ESP32.
-- INMP441 I2S: planificado, todavía no conectado ni integrado.
+- INMP441 I2S integrado en firmware; validación física pendiente.
 
 No se incluyen BME280, SIM7600, OBD-II ni mediciones de combustible o batería
 del vehículo. Los valores no disponibles no se sustituyen por cero.
@@ -104,7 +104,9 @@ sintéticos para validar TCP/1883.
 
 Consulta [docs/cellular_mqtt.md](docs/cellular_mqtt.md),
 [docs/storage.md](docs/storage.md) y
-[docs/local_web_ota.md](docs/local_web_ota.md).
+[docs/local_web_ota.md](docs/local_web_ota.md). El alcance, privacidad y
+limitaciones del INMP441 están en
+[docs/acoustic_monitoring.md](docs/acoustic_monitoring.md).
 
 ## Pruebas modulares
 
@@ -121,6 +123,7 @@ test_sim800l_mqtt_tls                 test_local_web
 test_local_ota      test_local_web_json test_mqtt_topics
 test_offline_queue  full_prototype      full_prototype_cellular
 vehiclesense_wifi
+test_inmp441       collect_acoustic_features test_acoustic_classifier
 ```
 
 Los comandos y criterios PASS/FAIL se encuentran en
@@ -140,14 +143,16 @@ Los comandos y criterios PASS/FAIL se encuentran en
   schema explícito para telemetría v2.
 - Perfil `vehiclesense_wifi` integrado con AP+STA, NTP/GPS, HiveMQ/TLS, QoS 1,
   LWT, tópicos por dispositivo y PUBACK.
-- Pendiente: validación física con credenciales HiveMQ/ACL, INMP441, backend,
+- INMP441 integrado con nivel dBFS relativo, FFT, características, categorías
+  heurísticas, alertas sostenidas y colección etiquetada sin audio crudo.
+- Pendiente: validación física de INMP441 y de credenciales HiveMQ/ACL, backend,
   PostgreSQL, frontend, simulador y despliegue.
 
 ## Roadmap
 
 - Validación física de `vehiclesense_wifi` contra HiveMQ Cloud.
-- INMP441 con nivel relativo, características espectrales y clasificador
-  heurístico honesto preparado para un futuro dataset.
+- Validación y dataset físico del INMP441; calibración SPL solo si se incorpora
+  una referencia acústica adecuada.
 - Backend FastAPI, PostgreSQL, REST/WebSocket, alertas y viajes.
 - Frontend VehicleSense con dashboard, mapa, detalle e históricos.
 - Simulador multivehículo y despliegue Docker/Nginx en Oracle Cloud.

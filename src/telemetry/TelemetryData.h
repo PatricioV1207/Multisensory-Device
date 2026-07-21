@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include "acoustic/AcousticTypes.h"
 #include "system/RuntimeStatus.h"
 
 struct DHT11Data {
@@ -89,18 +90,6 @@ struct GY801Data {
   MagData mag;
   BarometerData barometer;
   bool imuValid = false;
-};
-
-struct AcousticData {
-  float relativeLevelDbfs = NAN;
-  float peakDbfs = NAN;
-  float confidence = NAN;
-  bool microphoneValid = false;
-  bool analysisValid = false;
-  bool clipping = false;
-  const char* category = "unknown";
-  const char* classifierVersion = "";
-  uint32_t updatedAtMs = 0;
 };
 
 struct OfflineDeliveryStatus {

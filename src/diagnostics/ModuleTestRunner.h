@@ -3,11 +3,13 @@
 #include <Arduino.h>
 #include <WiFiClient.h>
 #include "diagnostics/BarometerCalibrationRunner.h"
+#include "acoustic/AcousticDatasetLogger.h"
 #include "communication/MQTTClientCustom.h"
 #include "communication/SIM800LModem.h"
 #include "communication/WiFiManagerCustom.h"
 #include "sensors/DHT11Sensor.h"
 #include "sensors/GPSNeo6M.h"
+#include "sensors/INMP441Microphone.h"
 #include "sensors/BH1750Sensor.h"
 #include "sensors/gy801/ADXL345Accel.h"
 #include "sensors/gy801/BMP180Barometer.h"
@@ -27,9 +29,11 @@ class ModuleTestRunner {
   void printReadings(uint32_t nowMs);
   void publishMqttTest(uint32_t nowMs);
   void updateLocalWebMock(uint32_t nowMs);
+  void updateAcousticCollection(uint32_t nowMs);
 
   DHT11Sensor _dht;
   GPSNeo6M _gps;
+  INMP441Microphone _microphone;
   ADXL345Accel _accel;
   L3G4200DGyro _gyro;
   HMC5883LMag _mag;
@@ -37,6 +41,7 @@ class ModuleTestRunner {
   GY801IMU _gy801;
   BH1750Sensor _light;
   MicroSDLogger _storage;
+  AcousticDatasetLogger _acousticDataset;
   SIM800LModem _modem;
   LocalWebServer _web;
   LocalWebData _localWebData;
@@ -51,4 +56,6 @@ class ModuleTestRunner {
   uint32_t _lastTcpTestMs = 0;
   bool _tcpTestAttempted = false;
   bool _tcpTestOk = false;
+  char _acousticLabel[12] = {0};
+  uint32_t _lastAcousticRecordMs = 0;
 };

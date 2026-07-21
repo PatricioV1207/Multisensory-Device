@@ -5,6 +5,27 @@
 #include <cstring>
 #include "telemetry_schema.h"
 
+namespace {
+bool inRange(float value, float minimum, float maximum) {
+  return std::isfinite(value) && value >= minimum && value <= maximum;
+}
+
+bool knownAcousticCategory(const char* category) {
+  constexpr const char* categories[] = {
+      "traffic", "music", "speech", "engine", "horn",
+      "siren",   "wind",  "quiet",  "unknown"};
+  if (category == nullptr) {
+    return false;
+  }
+  for (const char* candidate : categories) {
+    if (std::strcmp(category, candidate) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+}  // namespace
+
 bool TelemetryBuilder::build(const TelemetryData& data, char* output,
                              size_t outputSize, size_t* written) {
   if (written != nullptr) {
@@ -149,12 +170,13 @@ bool TelemetryBuilder::buildV3(const TelemetryData& data, char* output,
   const bool lightValid = data.light.valid && std::isfinite(data.light.lux);
   const bool acousticValid =
       data.acoustic.microphoneValid && data.acoustic.analysisValid &&
-      std::isfinite(data.acoustic.relativeLevelDbfs) &&
-      std::isfinite(data.acoustic.peakDbfs) &&
-      std::isfinite(data.acoustic.confidence) &&
-      data.acoustic.category != nullptr && data.acoustic.category[0] != '\0' &&
+      inRange(data.acoustic.relativeLevelDbfs, -160.0F, 0.0F) &&
+      inRange(data.acoustic.peakDbfs, -160.0F, 0.0F) &&
+      inRange(data.acoustic.confidence, 0.0F, 1.0F) &&
+      knownAcousticCategory(data.acoustic.category) &&
       data.acoustic.classifierVersion != nullptr &&
-      data.acoustic.classifierVersion[0] != '\0';
+      data.acoustic.classifierVersion[0] != '\0' &&
+      std::strlen(data.acoustic.classifierVersion) <= 40U;
 
   JsonDocument doc;
   doc["schema_version"] = TelemetrySchema::VEHICLESENSE_VERSION;

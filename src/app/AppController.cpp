@@ -60,6 +60,7 @@ void AppController::begin() {
     _offlineQueue.begin(_identity.bootId());
   }
   _web.begin(true);
+  _microphone.begin();
   if (_identity.isValid()) {
     _secureMqtt.begin(_identity.bootId());
   }
@@ -130,6 +131,8 @@ void AppController::update() {
   _offlineQueue.update(nowMs, _time.epochSeconds(), _storage.isReady());
   _secureMqtt.update(nowMs, _wifi.isConnected() && _time.isValid());
   processVehicleSenseMqtt(nowMs);
+  _microphone.update(nowMs);
+  processAcoustic(nowMs);
   _web.update(nowMs);
   if (static_cast<uint32_t>(nowMs - _lastWebSnapshotMs) >=
       LOCAL_WEB_SNAPSHOT_INTERVAL_MS) {
@@ -165,6 +168,7 @@ void AppController::buildSnapshot(uint32_t nowMs) {
   _telemetry.wifiRssiDbm = _wifi.rssi();
   _telemetry.mqttConnected = _secureMqtt.isConnected();
   _telemetry.offline = _offlineQueue.getStatus();
+  _telemetry.acoustic = _microphone.getData();
 #endif
   TelemetryValidator::validate(_telemetry, nowMs);
 }
@@ -365,6 +369,99 @@ void AppController::acknowledgeUnsupportedCommand(const char* commandId,
 #endif
 }
 
+void AppController::processAcoustic(uint32_t nowMs) {
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  const AcousticData data = _microphone.getData();
+  if (data.updatedAtMs == 0U ||
+      data.updatedAtMs == _lastAcousticProcessedMs) {
+    return;
+  }
+  _lastAcousticProcessedMs = data.updatedAtMs;
+  _acousticAlert = _acousticAlerts.update(data, nowMs);
+  if (!_identity.isValid() || _web.otaInProgress()) {
+    return;
+  }
+
+  const uint32_t sequence = _identity.nextSequence();
+  if (!_identity.formatSampleId(sequence, _acousticBaseSampleId,
+                                sizeof(_acousticBaseSampleId))) {
+    Logger::warn("AUDIO", "Could not format acoustic sample_id");
+    return;
+  }
+  const int sampleIdLength =
+      snprintf(_acousticSampleId, sizeof(_acousticSampleId), "%s:acoustic",
+               _acousticBaseSampleId);
+  if (sampleIdLength <= 0 ||
+      static_cast<size_t>(sampleIdLength) >= sizeof(_acousticSampleId)) {
+    Logger::warn("AUDIO", "Acoustic sample_id overflow");
+    return;
+  }
+  const bool timeValid =
+      _time.formatIso8601(_acousticMeasuredAt, sizeof(_acousticMeasuredAt));
+  AcousticMessageContext context;
+  context.deviceId = DEVICE_ID;
+  context.vehicleId = VEHICLE_ID;
+  context.bootId = _identity.bootId();
+  context.sequence = sequence;
+  context.sampleId = _acousticSampleId;
+  context.uptimeMs = static_cast<uint64_t>(esp_timer_get_time() / 1000LL);
+  context.timeValid = timeValid;
+  context.measuredAt = _acousticMeasuredAt;
+  context.simulated = false;
+  size_t written = 0U;
+  if (!AcousticMessageBuilder::buildAggregate(
+          context, data, _acousticPayload, sizeof(_acousticPayload),
+          &written)) {
+    Logger::warn("AUDIO", "Acoustic aggregate serialization failed");
+    return;
+  }
+  if (!_storage.appendJsonLine(_acousticPayload, written, nowMs)) {
+    Logger::warn("AUDIO", "Acoustic aggregate was not archived");
+  }
+  if (_secureMqtt.isConnected() &&
+      !_secureMqtt.publishAcoustic(_acousticPayload, written)) {
+    Logger::warn("AUDIO", "Acoustic MQTT publish rejected");
+  }
+
+  if (!_acousticAlert.triggered) {
+    return;
+  }
+  const uint32_t eventSequence = _identity.nextSequence();
+  if (!_identity.formatSampleId(eventSequence, _acousticBaseSampleId,
+                                sizeof(_acousticBaseSampleId))) {
+    return;
+  }
+  const int eventIdLength =
+      snprintf(_eventId, sizeof(_eventId), "%s:%s", _acousticBaseSampleId,
+               _acousticAlert.eventType);
+  if (eventIdLength <= 0 ||
+      static_cast<size_t>(eventIdLength) >= sizeof(_eventId)) {
+    return;
+  }
+  context.sequence = eventSequence;
+  context.sampleId = _acousticBaseSampleId;
+  if (!AcousticMessageBuilder::buildEvent(
+          context, data, _acousticAlert, _eventId, _acousticPayload,
+          sizeof(_acousticPayload), &written)) {
+    Logger::warn("AUDIO", "Acoustic event serialization failed");
+    return;
+  }
+  if (!_storage.appendJsonLine(_acousticPayload, written, nowMs)) {
+    Logger::warn("AUDIO", "Acoustic event was not archived");
+  }
+  if (_secureMqtt.isConnected() &&
+      !_secureMqtt.publishEvent(_acousticPayload, written)) {
+    Logger::warn("AUDIO", "Acoustic event MQTT publish rejected");
+  }
+  Logger::warn("AUDIO", "Sustained alert=" +
+                            String(_acousticAlert.eventType) +
+                            " confidence=" +
+                            String(_acousticAlert.confidence, 2));
+#else
+  (void)nowMs;
+#endif
+}
+
 void AppController::refreshLocalWebData(uint32_t nowMs) {
 #if APP_MODE == APP_MODE_FULL_PROTOTYPE_CELLULAR || \
     APP_MODE == APP_MODE_VEHICLESENSE_WIFI
@@ -413,8 +510,13 @@ void AppController::refreshLocalWebData(uint32_t nowMs) {
   local.mqtt = _mqttStatus;
   local.ota = _web.getOtaStatus();
   local.offline = _telemetry.offline;
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   local.acoustic = _telemetry.acoustic;
+  local.acousticAlert = _acousticAlert;
+  local.alertsAvailable = true;
+#else
   local.alertsAvailable = false;
+#endif
   _web.setData(local);
 #else
   (void)nowMs;

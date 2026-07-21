@@ -1,11 +1,27 @@
 #include "telemetry/TelemetryValidator.h"
 
 #include <cmath>
+#include <cstring>
 #include "config.h"
 
 namespace {
 bool finite3(float x, float y, float z) {
   return std::isfinite(x) && std::isfinite(y) && std::isfinite(z);
+}
+
+bool knownAcousticCategory(const char* category) {
+  constexpr const char* categories[] = {
+      "traffic", "music", "speech", "engine", "horn",
+      "siren",   "wind",  "quiet",  "unknown"};
+  if (category == nullptr) {
+    return false;
+  }
+  for (const char* candidate : categories) {
+    if (std::strcmp(category, candidate) == 0) {
+      return true;
+    }
+  }
+  return false;
 }
 }  // namespace
 
@@ -74,4 +90,24 @@ void TelemetryValidator::validate(TelemetryData& data, uint32_t nowMs) {
 
   data.gy801.imuValid = data.gy801.accel.valid && data.gy801.gyro.valid &&
                         data.gy801.mag.valid;
+
+  data.acoustic.microphoneValid =
+      data.acoustic.microphoneValid &&
+      isFresh(nowMs, data.acoustic.updatedAtMs, ACOUSTIC_STALE_MS);
+  data.acoustic.analysisValid =
+      data.acoustic.microphoneValid && data.acoustic.analysisValid &&
+      std::isfinite(data.acoustic.relativeLevelDbfs) &&
+      std::isfinite(data.acoustic.peakDbfs) &&
+      std::isfinite(data.acoustic.clippingRatio) &&
+      std::isfinite(data.acoustic.confidence) &&
+      data.acoustic.relativeLevelDbfs >= -160.0F &&
+      data.acoustic.relativeLevelDbfs <= 0.0F &&
+      data.acoustic.peakDbfs >= -160.0F && data.acoustic.peakDbfs <= 0.0F &&
+      data.acoustic.clippingRatio >= 0.0F &&
+      data.acoustic.clippingRatio <= 1.0F && data.acoustic.confidence >= 0.0F &&
+      data.acoustic.confidence <= 1.0F &&
+      knownAcousticCategory(data.acoustic.category) &&
+      data.acoustic.classifierVersion != nullptr &&
+      data.acoustic.classifierVersion[0] != '\0' &&
+      std::strlen(data.acoustic.classifierVersion) <= 40U;
 }

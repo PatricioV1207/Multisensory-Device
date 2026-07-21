@@ -6,7 +6,8 @@
 DHT11 ─┐
 GPS ───┼─> datos tipados ─> TelemetryValidator ─> TelemetryBuilder v2/v3
 GY-801 ┤                               │                  │
-BH1750 ┘                               └──────────────> Serial
+BH1750 ┤                               └──────────────> Serial
+INMP441─> I2S + FFT ─> agregado acústico/alerta ──────────┤
                                                           │
                           ┌──────── archivo JSONL <────────┤
                           └──────── spool QoS 1 ───────────┼─> HiveMQ/TLS
@@ -44,6 +45,16 @@ formato JSON, y los clientes de comunicación no conocen registros I2C.
 - `SIM800LModem`: estados AT, SIM, red 2G y GPRS.
 - `LocalWebServer`: monitor local AP+STA con estado y coordenadas GPS en texto,
   sin mapa, además de administración OTA.
+- `INMP441Microphone`: captura I2S en una tarea acotada, elimina DC, aplica
+  pasa-altos, ventana Hann y genera agregados de aproximadamente un segundo.
+- `AudioFeatureExtractor`: FFT y características relativas sin dependencia de
+  hardware; no convierte dBFS a dB SPL.
+- `AcousticClassifier`: reglas conservadoras versionadas; devuelve `unknown`
+  cuando la evidencia es insuficiente.
+- `AcousticAlertEvaluator`: exige nivel, confianza, persistencia y ausencia de
+  clipping antes de generar un evento, con cooldown entre eventos.
+- `AcousticDatasetLogger`: guarda únicamente características etiquetadas; la
+  captura de audio crudo está desactivada.
 
 El BMP180 no conoce GPS ni NVS. `AppController` carga la referencia persistida
 y la inyecta en la fachada GY-801. El environment `calibrate_bmp180` es el único
@@ -54,6 +65,11 @@ flujo que combina GPS y barómetro para calcular una nueva referencia.
 El scheduler usa resta de `uint32_t` sobre `millis()`, por lo que tolera su
 desbordamiento. GPS y mantenimiento MQTT se atienden en cada `loop()`; DHT,
 GY-801 y telemetría usan intervalos independientes de `config.h`.
+
+La captura I2S corre en una tarea FreeRTOS de prioridad baja fijada al núcleo 0.
+Cada frame contiene 1024 muestras a 16 kHz y 16 frames forman un agregado de
+aproximadamente 1.024 s. El `loop()` solo lee instantáneas protegidas, por lo
+que la FFT no bloquea el procesamiento continuo de GPS.
 
 El perfil heredado usa PubSubClient. `vehiclesense_wifi` usa ESP-MQTT sobre TLS
 y espera una hora confiable antes del handshake de certificados. Las

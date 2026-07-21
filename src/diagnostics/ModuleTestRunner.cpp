@@ -70,6 +70,16 @@ void ModuleTestRunner::begin() {
     _light.begin();
   } else if (APP_MODE == APP_MODE_TEST_MICROSD) {
     _storage.begin();
+  } else if (APP_MODE == APP_MODE_TEST_INMP441) {
+    _microphone.begin();
+  } else if (APP_MODE == APP_MODE_COLLECT_ACOUSTIC_FEATURES) {
+    _storage.begin();
+    if (_storage.isReady()) {
+      _acousticDataset.begin();
+    }
+    _microphone.begin();
+    Logger::info("AUDIO", "Labels: q=quiet w=wind e=engine p=speech "
+                           "m=music h=horn s=siren t=traffic u=unknown x=pause");
   } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT) {
     _modem.begin(SIM800LMode::AtOnly);
   } else if (APP_MODE == APP_MODE_TEST_SIM800L_GPRS) {
@@ -139,6 +149,15 @@ void ModuleTestRunner::update(uint32_t nowMs) {
         _storage.appendJsonLine(record, static_cast<size_t>(count), nowMs);
       }
     }
+  } else if (APP_MODE == APP_MODE_TEST_INMP441) {
+    _microphone.update(nowMs);
+  } else if (APP_MODE == APP_MODE_COLLECT_ACOUSTIC_FEATURES) {
+    _storage.update(nowMs);
+    _microphone.update(nowMs);
+    if (!_acousticDataset.isReady() && _storage.isReady()) {
+      _acousticDataset.begin();
+    }
+    updateAcousticCollection(nowMs);
   } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT ||
              APP_MODE == APP_MODE_TEST_SIM800L_GPRS) {
     _modem.update(nowMs);
@@ -241,6 +260,20 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
                   static_cast<unsigned long>(d.bootSession),
                   static_cast<unsigned>(d.segment),
                   static_cast<unsigned long long>(d.freeBytes));
+  } else if (APP_MODE == APP_MODE_TEST_INMP441 ||
+             APP_MODE == APP_MODE_COLLECT_ACOUSTIC_FEATURES) {
+    const AcousticData d = _microphone.getData();
+    Serial.printf(
+        "[TEST_INMP441] mic=%d analysis=%d level_dbfs=%.2f peak_dbfs=%.2f "
+        "clip=%d clip_ratio=%.5f crest=%.3f zcr=%.4f centroid_hz=%.1f "
+        "flatness=%.4f rolloff_hz=%.1f bands=%.4f,%.4f,%.4f,%.4f,%.4f "
+        "category=%s confidence=%.3f label=%s raw_audio=disabled\n",
+        d.microphoneValid, d.analysisValid, d.relativeLevelDbfs, d.peakDbfs,
+        d.clipping, d.clippingRatio, d.crestFactor, d.zeroCrossingRate,
+        d.spectralCentroidHz, d.spectralFlatness, d.spectralRolloffHz,
+        d.bands.hz80To250, d.bands.hz250To800, d.bands.hz800To2000,
+        d.bands.hz2000To4000, d.bands.hz4000To8000, d.category,
+        d.confidence, _acousticLabel[0] == '\0' ? "paused" : _acousticLabel);
   } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT ||
              APP_MODE == APP_MODE_TEST_SIM800L_GPRS ||
              APP_MODE == APP_MODE_TEST_SIM800L_MQTT ||
@@ -266,6 +299,46 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
     Serial.printf("[TEST_NET] wifi=%d ip=%s rssi=%ld mqtt=%d state=%d\n",
                   _wifi.isConnected(), _wifi.localIp().c_str(),
                   static_cast<long>(_wifi.rssi()), _mqtt.isConnected(), _mqtt.state());
+  }
+}
+
+void ModuleTestRunner::updateAcousticCollection(uint32_t nowMs) {
+  while (Serial.available() > 0) {
+    const char command = static_cast<char>(Serial.read());
+    const char* label = nullptr;
+    switch (command) {
+      case 'q': label = "quiet"; break;
+      case 'w': label = "wind"; break;
+      case 'e': label = "engine"; break;
+      case 'p': label = "speech"; break;
+      case 'm': label = "music"; break;
+      case 'h': label = "horn"; break;
+      case 's': label = "siren"; break;
+      case 't': label = "traffic"; break;
+      case 'u': label = "unknown"; break;
+      case 'x':
+        _acousticLabel[0] = '\0';
+        Logger::info("AUDIO", "Feature collection paused");
+        break;
+      default:
+        break;
+    }
+    if (label != nullptr) {
+      strncpy(_acousticLabel, label, sizeof(_acousticLabel) - 1U);
+      _acousticLabel[sizeof(_acousticLabel) - 1U] = '\0';
+      Logger::info("AUDIO", "Collecting label=" + String(_acousticLabel));
+    }
+  }
+  if (_acousticLabel[0] == '\0') {
+    return;
+  }
+  const AcousticData data = _microphone.getData();
+  if (data.updatedAtMs == 0U || data.updatedAtMs == _lastAcousticRecordMs) {
+    return;
+  }
+  _lastAcousticRecordMs = data.updatedAtMs;
+  if (!_acousticDataset.append(_acousticLabel, data, nowMs)) {
+    Logger::warn("AUDIO", "Feature row not stored; check mic and microSD");
   }
 }
 

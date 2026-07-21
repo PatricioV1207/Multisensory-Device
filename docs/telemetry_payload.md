@@ -6,6 +6,11 @@ ThingsBoard asigna la fecha al recibir el mensaje. `uptime_ms` es tiempo desde
 el arranque, no Unix epoch. Un broker genérico debe fechar el mensaje al
 recibirlo o añadir NTP en una fase posterior.
 
+El perfil VehicleSense usa `schema_version=3`, identidad persistente y
+`time_valid`. Cuando NTP o GPS proporcionan UTC confiable incluye
+`measured_at`; si no, omite la fecha en vez de inventarla. El esquema v2 se
+mantiene para los perfiles heredados.
+
 ## Campos
 
 | Grupo | Campos | Unidad |
@@ -19,6 +24,7 @@ recibirlo o añadir NTP en una fase posterior.
 | Barómetro | `pressure_hpa`, `sea_level_pressure_hpa`, `baro_temperature_c`, `baro_altitude_m` | hPa, °C, m |
 | Luz | `light_lux` | lx |
 | Estado | `sd_valid`, `sim_valid`, `gprs_connected`, `gsm_csq` | — |
+| Acústica v3 | `mic_valid`, `acoustic_valid`, `acoustic_relative_level_dbfs`, `acoustic_peak_dbfs`, `acoustic_category`, `acoustic_confidence`, `acoustic_clipping` | dBFS relativo, — |
 
 Las banderas `dht_valid`, `gps_valid`, `accel_valid`, `gyro_valid`,
 `mag_valid`, `baro_valid` e `imu_valid` siempre aparecen. `imu_valid` exige
@@ -66,3 +72,16 @@ Un dato inválido se omite. Por ejemplo, si el GPS aún no tiene fix:
 ```
 
 No se serializan `NaN`, `null` ni valores anteriores obsoletos.
+
+## Mensajes acústicos
+
+El tópico `acoustic` usa un contrato separado `acoustic-v1` con agregados de
+aproximadamente un segundo, características espectrales y proporciones de
+energía por banda. Los eventos sostenidos se publican como `event-v1`. El
+payload de telemetría v3 conserva solo el resumen más reciente.
+
+`relative_level_dbfs` y `peak_dbfs` son relativos al máximo digital. No son
+mediciones dB SPL calibradas. Las categorías provienen de una heurística
+versionada y deben interpretarse como candidatas experimentales, no como una
+identificación acústica certificada. El dispositivo no transmite ni almacena
+audio crudo.

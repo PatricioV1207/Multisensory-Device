@@ -16,3 +16,7 @@
 #define PIN_SD_MISO 19
 #define PIN_SD_MOSI 23
 #define PIN_SD_CS 5
+
+#define PIN_INMP441_BCLK 26
+#define PIN_INMP441_WS 25
+#define PIN_INMP441_DATA 34

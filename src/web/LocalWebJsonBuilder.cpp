@@ -123,6 +123,13 @@ bool LocalWebJsonBuilder::buildBasicTelemetry(const LocalWebData& data,
   document["gps_chars_processed"] = data.gps.charsProcessed;
   document["mic_valid"] = data.acoustic.microphoneValid;
   document["acoustic_valid"] = data.acoustic.analysisValid;
+  document["acoustic_alert_active"] = data.acousticAlert.active;
+  if (data.acousticAlert.active) {
+    document["acoustic_alert_type"] = data.acousticAlert.eventType;
+    document["acoustic_alert_severity"] = data.acousticAlert.severity;
+    document["acoustic_alert_confidence"] = data.acousticAlert.confidence;
+    document["acoustic_alert_duration_ms"] = data.acousticAlert.durationMs;
+  }
 
   if (data.dht.valid && std::isfinite(data.dht.temperatureC) &&
       std::isfinite(data.dht.humidityPercent)) {

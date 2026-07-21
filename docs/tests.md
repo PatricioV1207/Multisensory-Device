@@ -18,6 +18,7 @@ pio test -e test_barometer_math
 pio test -e test_local_web_json
 pio test -e test_mqtt_topics
 pio test -e test_offline_queue
+pio test -e test_acoustic_classifier
 ```
 
 ## Orden obligatorio
@@ -40,9 +41,11 @@ pio test -e test_offline_queue
 15. `test_sim800l_mqtt_tls`: comprobar TLS/SNI con el broker real.
 16. `test_local_web`: revisar dashboard y APIs; `test_local_ota`: autenticación
     y actualización con un binario válido.
-17. Configurar HiveMQ y ejecutar `vehiclesense_wifi`: TLS, LWT, PUBACK y
-    reconexión.
-18. Ejecutar las pruebas nativas y después `vehiclesense_wifi` durante al
+17. `test_inmp441`: comprobar señal I2S, nivel relativo, clipping y respuesta
+    espectral; después `collect_acoustic_features` con microSD.
+18. Configurar HiveMQ y ejecutar `vehiclesense_wifi`: TLS, LWT, PUBACK,
+    mensajes acústicos y reconexión.
+19. Ejecutar las pruebas nativas y después `vehiclesense_wifi` durante al
     menos 60 minutos con fallos parciales inducidos.
 
 ## BH1750 y bus I2C
@@ -111,6 +114,52 @@ Para OTA, la primera carga se realiza por USB. Compila
 de un archivo no válido y luego un binario correcto. El ESP32 solo debe
 reiniciarse tras finalizar `Update.end(true)` correctamente. Conserva USB como
 método de recuperación.
+
+## INMP441 y análisis acústico
+
+Conecta el INMP441 según `wiring.md`: BCLK GPIO26, WS GPIO25, SD GPIO34 y
+`L/R = GND`. Ejecuta:
+
+```bash
+pio run -e test_inmp441 -t upload
+pio device monitor -b 115200
+```
+
+La salida incluye `mic`, `analysis`, nivel y pico en dBFS, clipping, crest
+factor, cruces por cero, centroide, flatness, rolloff, cinco bandas, categoría
+y confianza. Realiza y documenta al menos estas pruebas físicas:
+
+1. Micrófono desconectado o `L/R` incorrecto: `mic=0`, sin inventar silencio.
+2. Ambiente silencioso durante 30 s: valores finitos y estables, sin alertas.
+3. Voz a distancia fija: cambio visible de nivel, cruces por cero y bandas.
+4. Palmada o sonido muy cercano: sube el pico; si satura debe marcar `clip=1`.
+5. Tono conocido de 1 kHz reproducido por un altavoz: el centroide y la banda
+   800–2000 Hz deberían dominar de forma aproximada.
+6. Desconectar y volver a conectar: el firmware no debe bloquear el resto del
+   sistema; la recuperación completa puede requerir reinicio porque I2S queda
+   instalado durante la sesión.
+
+Los valores son **dBFS relativos** al rango digital del micrófono. No son dB
+SPL y no permiten afirmar cumplimiento de límites legales de ruido sin una
+fuente acústica calibrada y una curva de calibración del conjunto.
+
+Para construir un dataset de características, inserta una microSD y ejecuta:
+
+```bash
+pio run -e collect_acoustic_features -t upload
+pio device monitor -b 115200
+```
+
+Selecciona la etiqueta desde el monitor: `q` quiet, `w` wind, `e` engine, `p`
+speech, `m` music, `h` horn, `s` siren, `t` traffic, `u` unknown y `x` pausa.
+Cada agregado válido se guarda en `/acoustic/features.jsonl`. Anota para cada
+sesión el lugar, vehículo, distancia al sonido, ventanas, etiqueta y
+condiciones. No se almacena audio crudo.
+
+El environment nativo `test_acoustic_classifier` comprueba FFT, clipping,
+señal ausente, agregación de energía, categorías conservadoras, duración de
+alerta y contratos JSON. No sustituye la validación física ni demuestra una
+precisión estadística del clasificador.
 
 ## Calibración ADXL345
 
@@ -212,6 +261,11 @@ comparando con la presión normalizada de una aplicación meteorológica.
   mapa o recurso externo.
 - OTA: administrador protegido, archivo inválido rechazado y calibración BMP180
   conservada después de reiniciar.
+- INMP441: señal válida y sensible a estímulos, clipping explícito, ninguna
+  cifra llamada dB SPL y ningún audio crudo guardado.
+- Clasificador acústico: se acepta como heurística experimental solo si
+  conserva `unknown` ante ambigüedad; la precisión debe medirse con un dataset
+  etiquetado antes de usar sus categorías como evidencia.
 - JSON: todos los tests Unity deben finalizar en `PASSED`.
 - Integración: durante 60 minutos no debe haber bloqueos, watchdog resets ni
   publicación de NaN; sin red las muestras deben seguir llegando a microSD.

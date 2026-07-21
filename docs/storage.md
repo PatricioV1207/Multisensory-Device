@@ -9,6 +9,12 @@ VehicleSense separa deliberadamente dos usos de la microSD:
 2. **Spool de entrega:** `OfflineTelemetryQueue` conserva bajo `/spool` cada
    muestra v3 pendiente hasta recibir el PUBACK de MQTT QoS 1.
 
+En `vehiclesense_wifi`, el archivo de auditoría también recibe mensajes
+`acoustic` y `event`, identificados por `message_type`. El spool durable de esta
+fase cubre únicamente `telemetry`: los agregados acústicos y eventos se
+publican en vivo con QoS 1 y quedan archivados localmente, pero todavía no se
+reproducen desde `/spool` después de una desconexión.
+
 El archivo JSONL no se consume al reenviar y el spool no reemplaza al archivo.
 Esta separación evita confundir historial local con estado de entrega.
 

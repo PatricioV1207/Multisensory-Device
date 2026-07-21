@@ -26,6 +26,12 @@ GND. Desconecta la alimentación antes de modificar el cableado.
 | microSD | CS | GPIO5 | Pull-up recomendado por ser pin de arranque |
 | SIM800L | TX | GPIO16 (RX1) | Módem hacia ESP32 |
 | SIM800L | RX | GPIO17 (TX1) | Verificar niveles del breakout V2 |
+| INMP441 | SCK/BCLK | GPIO26 | Reloj I2S generado por el ESP32 |
+| INMP441 | WS/LRCL | GPIO25 | Selección de palabra I2S |
+| INMP441 | SD | GPIO34 | Datos I2S hacia el ESP32; GPIO34 es solo entrada |
+| INMP441 | L/R | GND | Selecciona el canal izquierdo usado por el firmware |
+| INMP441 | VDD | 3V3 | No alimentar con 5 V |
+| INMP441 | GND | GND | Tierra común y cableado corto |
 
 ## Direcciones I2C esperadas
 
@@ -46,3 +52,15 @@ integración completa hasta documentar las direcciones observadas.
 SIM800L debe usar fuente independiente capaz de entregar picos de al menos 2 A,
 condensador de 470–1000 µF cerca del módulo y GND común. No alimentarlo desde
 3V3 del ESP32.
+
+## INMP441
+
+El INMP441 se conecta por I2S y no comparte el bus I2C. Mantén BCLK, WS y SD
+lo más cortos posible y evita pasarlos junto a la alimentación pulsante del
+SIM800L. La selección `L/R = GND` es obligatoria con la configuración actual,
+que captura únicamente el canal izquierdo. Si el módulo se configura como
+canal derecho, el diagnóstico mostrará señal ausente o inválida.
+
+Antes de integrar el micrófono al vehículo, ejecuta `test_inmp441` y confirma
+físicamente que voz, palmadas y silencio cambian el nivel y las características.
+Que el firmware compile no prueba el pinout ni la integridad de la señal I2S.

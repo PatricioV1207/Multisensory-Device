@@ -263,6 +263,15 @@ bool VehicleSenseMqttClient::publishCommandAck(const char* payload,
   return publishTo(_topics.commandAcks(), payload, length, 1, false);
 }
 
+bool VehicleSenseMqttClient::publishAcoustic(const char* payload,
+                                             size_t length) {
+  return publishTo(_topics.acoustic(), payload, length, 1, false);
+}
+
+bool VehicleSenseMqttClient::publishEvent(const char* payload, size_t length) {
+  return publishTo(_topics.events(), payload, length, 1, false);
+}
+
 bool VehicleSenseMqttClient::publishStatus() {
   return publishTo(_topics.status(), _onlineStatus, strlen(_onlineStatus), 1,
                    true);

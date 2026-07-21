@@ -13,6 +13,8 @@ class VehicleSenseMqttClient {
   void update(uint32_t nowMs, bool networkReady);
 
   bool publishTelemetry(const char* payload, size_t length, uint32_t token);
+  bool publishAcoustic(const char* payload, size_t length);
+  bool publishEvent(const char* payload, size_t length);
   bool publishCommandAck(const char* payload, size_t length);
   bool publishStatus();
   bool takeTelemetryAck(uint32_t& token, uint32_t& acknowledgedAtMs);
