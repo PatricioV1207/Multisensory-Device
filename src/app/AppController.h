@@ -12,6 +12,8 @@
 #include "sensors/BH1750Sensor.h"
 #include "sensors/gy801/GY801IMU.h"
 #include "storage/MicroSDLogger.h"
+#include "system/DeviceIdentity.h"
+#include "system/TimeService.h"
 #include "telemetry/TelemetryData.h"
 #include "web/LocalWebServer.h"
 
@@ -37,9 +39,13 @@ class AppController {
   WiFiClient _wifiClient;
   MQTTClientCustom _mqtt;
   ModuleTestRunner _testRunner;
+  DeviceIdentity _identity;
+  TimeService _time;
   TelemetryData _telemetry;
   MqttRuntimeStatus _mqttStatus;
   uint32_t _lastTelemetryMs = 0;
   uint32_t _lastWebSnapshotMs = 0;
   char _payload[TELEMETRY_PAYLOAD_BUFFER_SIZE] = {0};
+  char _sampleId[128] = {0};
+  char _measuredAt[32] = {0};
 };

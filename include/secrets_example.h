@@ -5,6 +5,11 @@
 #define WIFI_SSID "YOUR_WIFI_SSID"
 #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
 
+// Public identities. They are not passwords, but each deployed device and
+// vehicle must use stable unique values.
+#define DEVICE_ID "vehiclesense_device_01"
+#define VEHICLE_ID "vehicle_01"
+
 // ThingsBoard: use the device access token as MQTT_USERNAME and leave
 // MQTT_PASSWORD empty. For another broker, configure all fields as required.
 #define MQTT_HOST "demo.thingsboard.io"

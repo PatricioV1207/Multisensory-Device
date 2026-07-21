@@ -27,6 +27,24 @@ TelemetryData completeSample() {
   return data;
 }
 
+TelemetryData vehicleSenseSample() {
+  TelemetryData data = completeSample();
+  data.vehicleId = "vehicle_01";
+  data.bootId = 7;
+  data.sequence = 42;
+  data.sampleId = "bus_iot_prototype_01:7:42";
+  data.timeValid = true;
+  data.measuredAt = "2026-07-20T23:18:51Z";
+  data.replayed = false;
+  data.simulated = false;
+  data.gps.hdop = 0.9F;
+  data.wifiConnected = true;
+  data.wifiRssiDbm = -58;
+  data.mqttConnected = true;
+  data.offline.replayed = 4;
+  return data;
+}
+
 void test_complete_payload_contains_expected_fields() {
   const TelemetryData data = completeSample();
   char output[1536];
@@ -87,6 +105,61 @@ void test_small_buffer_and_missing_device_are_rejected() {
   data.deviceId = "";
   TEST_ASSERT_FALSE(TelemetryBuilder::build(data, output, sizeof(output)));
 }
+
+void test_v3_payload_has_identity_time_and_transport_state() {
+  const TelemetryData data = vehicleSenseSample();
+  char output[2048];
+  size_t written = 0;
+  TEST_ASSERT_TRUE(
+      TelemetryBuilder::buildV3(data, output, sizeof(output), &written));
+  TEST_ASSERT_GREATER_THAN(0U, written);
+
+  JsonDocument doc;
+  TEST_ASSERT_FALSE(deserializeJson(doc, output));
+  TEST_ASSERT_EQUAL(3, doc["schema_version"].as<int>());
+  TEST_ASSERT_EQUAL_STRING("telemetry", doc["message_type"]);
+  TEST_ASSERT_EQUAL_STRING("vehicle_01", doc["vehicle_id"]);
+  TEST_ASSERT_EQUAL(7U, doc["boot_id"].as<unsigned>());
+  TEST_ASSERT_EQUAL(42U, doc["sequence"].as<unsigned>());
+  TEST_ASSERT_EQUAL_STRING("bus_iot_prototype_01:7:42", doc["sample_id"]);
+  TEST_ASSERT_TRUE(doc["time_valid"].as<bool>());
+  TEST_ASSERT_EQUAL_STRING("2026-07-20T23:18:51Z", doc["measured_at"]);
+  TEST_ASSERT_TRUE(doc["wifi_connected"].as<bool>());
+  TEST_ASSERT_EQUAL(-58, doc["wifi_rssi_dbm"].as<int>());
+  TEST_ASSERT_TRUE(doc["mqtt_connected"].as<bool>());
+  TEST_ASSERT_FALSE(doc["mic_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["acoustic_valid"].as<bool>());
+  TEST_ASSERT_EQUAL(4U, doc["offline_replayed"].as<unsigned>());
+}
+
+void test_v3_omits_untrusted_time_and_invalid_values() {
+  TelemetryData data = vehicleSenseSample();
+  data.timeValid = false;
+  data.measuredAt = "";
+  data.dht.valid = false;
+  data.gps.hdop = NAN;
+  char output[2048];
+  TEST_ASSERT_TRUE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
+
+  JsonDocument doc;
+  TEST_ASSERT_FALSE(deserializeJson(doc, output));
+  TEST_ASSERT_FALSE(doc["time_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["measured_at"].is<const char*>());
+  TEST_ASSERT_FALSE(doc["dht_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["temperature_c"].is<float>());
+  TEST_ASSERT_FALSE(doc["gps_valid"].as<bool>());
+  TEST_ASSERT_FALSE(doc["latitude"].is<double>());
+}
+
+void test_v3_rejects_missing_vehicle_or_persistent_identity() {
+  TelemetryData data = vehicleSenseSample();
+  char output[2048];
+  data.vehicleId = "";
+  TEST_ASSERT_FALSE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
+  data.vehicleId = "vehicle_01";
+  data.bootId = 0;
+  TEST_ASSERT_FALSE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
+}
 }  // namespace
 
 int main(int, char**) {
@@ -94,5 +167,8 @@ int main(int, char**) {
   RUN_TEST(test_complete_payload_contains_expected_fields);
   RUN_TEST(test_invalid_measurements_are_omitted_but_flags_remain);
   RUN_TEST(test_small_buffer_and_missing_device_are_rejected);
+  RUN_TEST(test_v3_payload_has_identity_time_and_transport_state);
+  RUN_TEST(test_v3_omits_untrusted_time_and_invalid_values);
+  RUN_TEST(test_v3_rejects_missing_vehicle_or_persistent_identity);
   return UNITY_END();
 }

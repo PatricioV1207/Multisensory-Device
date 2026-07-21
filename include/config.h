@@ -28,13 +28,19 @@
 #define APP_MODE_TEST_LOCAL_WEB 18
 #define APP_MODE_TEST_LOCAL_OTA 19
 #define APP_MODE_FULL_PROTOTYPE_CELLULAR 20
+#define APP_MODE_VEHICLESENSE_WIFI 21
 
 #ifndef APP_MODE
 #define APP_MODE APP_MODE_FULL_PROTOTYPE
 #endif
 
 #ifndef DEVICE_ID
+// Kept unchanged for backward compatibility with deployed schema-v2 devices.
 #define DEVICE_ID "bus_iot_prototype_01"
+#endif
+
+#ifndef VEHICLE_ID
+#define VEHICLE_ID "vehicle_prototype_01"
 #endif
 
 #ifndef FIRMWARE_VERSION
@@ -77,6 +83,18 @@
 
 #ifndef TELEMETRY_INTERVAL_MS
 #define TELEMETRY_INTERVAL_MS 10000UL
+#endif
+
+#ifndef NTP_SYNC_RETRY_INTERVAL_MS
+#define NTP_SYNC_RETRY_INTERVAL_MS 60000UL
+#endif
+
+#ifndef NTP_SERVER_PRIMARY
+#define NTP_SERVER_PRIMARY "pool.ntp.org"
+#endif
+
+#ifndef NTP_SERVER_SECONDARY
+#define NTP_SERVER_SECONDARY "time.cloudflare.com"
 #endif
 
 #ifndef TEST_OUTPUT_INTERVAL_MS

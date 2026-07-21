@@ -33,6 +33,29 @@ void GPSNeo6M::update(uint32_t nowMs) {
     _data.hdop = _gps.hdop.hdop();
   }
 
+  const bool freshUtc = _gps.date.isValid() && _gps.time.isValid() &&
+                        _gps.date.age() <= GPS_FIX_MAX_AGE_MS &&
+                        _gps.time.age() <= GPS_FIX_MAX_AGE_MS &&
+                        _gps.date.year() >= 2020 &&
+                        _gps.date.month() >= 1 && _gps.date.month() <= 12 &&
+                        _gps.date.day() >= 1 && _gps.date.day() <= 31 &&
+                        _gps.time.hour() <= 23 && _gps.time.minute() <= 59 &&
+                        _gps.time.second() <= 60;
+  if (freshUtc) {
+    _data.utcYear = _gps.date.year();
+    _data.utcMonth = _gps.date.month();
+    _data.utcDay = _gps.date.day();
+    _data.utcHour = _gps.time.hour();
+    _data.utcMinute = _gps.time.minute();
+    _data.utcSecond = _gps.time.second() > 59 ? 59 : _gps.time.second();
+    const uint32_t utcAge =
+        _gps.date.age() > _gps.time.age() ? _gps.date.age() : _gps.time.age();
+    _data.utcUpdatedAtMs = nowMs - utcAge;
+    _data.utcValid = true;
+  } else {
+    _data.utcValid = false;
+  }
+
   const bool freshFix = _gps.location.isValid() && _gps.altitude.isValid() &&
                         _gps.speed.isValid() &&
                         _gps.location.age() <= GPS_FIX_MAX_AGE_MS &&

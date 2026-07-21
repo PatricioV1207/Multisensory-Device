@@ -15,9 +15,15 @@ void AppController::begin() {
                            " app_mode=" + String(APP_MODE));
 
 #if APP_MODE != APP_MODE_FULL_PROTOTYPE && \
-    APP_MODE != APP_MODE_FULL_PROTOTYPE_CELLULAR
+    APP_MODE != APP_MODE_FULL_PROTOTYPE_CELLULAR && \
+    APP_MODE != APP_MODE_VEHICLESENSE_WIFI
   _testRunner.begin();
   return;
+#endif
+
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _identity.begin();
+  _time.begin();
 #endif
 
   beginSharedSensors();
@@ -43,6 +49,10 @@ void AppController::begin() {
     Logger::error("CONFIG", "Cellular MQTT blocked: enable TLS or explicit "
                             "lab-only insecure override");
   }
+#elif APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _wifi.begin();
+  Logger::info("BOOT", "VehicleSense v3 enabled; secure MQTT follows in the "
+                       "next integration milestone");
 #endif
   _mqttStatus.configured = _mqtt.isConfigured();
   Logger::info("BOOT", "Initialization complete; failures are non-fatal");
@@ -70,7 +80,8 @@ void AppController::update() {
   const uint32_t nowMs = millis();
 
 #if APP_MODE != APP_MODE_FULL_PROTOTYPE && \
-    APP_MODE != APP_MODE_FULL_PROTOTYPE_CELLULAR
+    APP_MODE != APP_MODE_FULL_PROTOTYPE_CELLULAR && \
+    APP_MODE != APP_MODE_VEHICLESENSE_WIFI
   _testRunner.update(nowMs);
   delay(1);
   return;
@@ -97,6 +108,9 @@ void AppController::update() {
     _lastWebSnapshotMs = nowMs;
     refreshLocalWebData(nowMs);
   }
+#elif APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _wifi.update(nowMs);
+  _time.update(nowMs, _wifi.isConnected(), _gps.getData());
 #endif
 
   if (static_cast<uint32_t>(nowMs - _lastTelemetryMs) >= TELEMETRY_INTERVAL_MS) {
@@ -115,13 +129,43 @@ void AppController::buildSnapshot(uint32_t nowMs) {
   _telemetry.light = _light.getData();
   _telemetry.storage = _storage.getStatus();
   _telemetry.cellular = _modem.getStatus();
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _telemetry.vehicleId = VEHICLE_ID;
+  _telemetry.bootId = _identity.bootId();
+  _telemetry.sampleId = _sampleId;
+  _telemetry.measuredAt = _measuredAt;
+  _telemetry.replayed = false;
+  _telemetry.simulated = false;
+  _telemetry.wifiConnected = _wifi.isConnected();
+  _telemetry.wifiRssiDbm = _wifi.rssi();
+  _telemetry.mqttConnected = _mqtt.isConnected();
+#endif
   TelemetryValidator::validate(_telemetry, nowMs);
 }
 
 void AppController::publishTelemetry(uint32_t nowMs) {
   buildSnapshot(nowMs);
   size_t written = 0;
-  if (!TelemetryBuilder::build(_telemetry, _payload, sizeof(_payload), &written)) {
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  if (!_identity.isValid()) {
+    Logger::error("IDENTITY", "Telemetry v3 skipped; persistent identity unavailable");
+    return;
+  }
+  _telemetry.sequence = _identity.nextSequence();
+  if (!_identity.formatSampleId(_telemetry.sequence, _sampleId,
+                                sizeof(_sampleId))) {
+    Logger::error("IDENTITY", "Telemetry v3 skipped; sample_id overflow");
+    return;
+  }
+  _telemetry.timeValid =
+      _time.formatIso8601(_measuredAt, sizeof(_measuredAt));
+  const bool built = TelemetryBuilder::buildV3(
+      _telemetry, _payload, sizeof(_payload), &written);
+#else
+  const bool built = TelemetryBuilder::build(
+      _telemetry, _payload, sizeof(_payload), &written);
+#endif
+  if (!built) {
     Logger::error("JSON", "Serialization failed or payload buffer is too small");
     return;
   }
@@ -137,6 +181,11 @@ void AppController::publishTelemetry(uint32_t nowMs) {
   if (!_storage.appendJsonLine(_payload, written, nowMs)) {
     Logger::warn("SD", "Telemetry sample was not persisted");
   }
+#endif
+
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  Logger::debug("MQTT", "v3 sample prepared locally; secure transport not active yet");
+  return;
 #endif
 
   if (!_mqtt.isConnected()) {
