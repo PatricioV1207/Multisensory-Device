@@ -15,6 +15,9 @@ class LiveUpdateManager:
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
+        await self.register(websocket)
+
+    async def register(self, websocket: WebSocket) -> None:
         async with self._lock:
             self._connections.add(websocket)
 

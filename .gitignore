@@ -15,3 +15,8 @@ node_modules/
 dist/
 coverage/
 *.db
+deploy/backups/
+deploy/certbot/conf/
+deploy/certbot/www/
+*.dump
+*.dump.sha256

@@ -1,0 +1,135 @@
+name: ${COMPOSE_PROJECT_NAME:-vehiclesense}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: vehiclesense/backend:${VEHICLESENSE_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VEHICLESENSE_ENVIRONMENT: production
+      VEHICLESENSE_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      VEHICLESENSE_AUTO_CREATE_SCHEMA: "false"
+      VEHICLESENSE_CORS_ORIGINS: '["https://${DOMAIN}"]'
+      VEHICLESENSE_JWT_SECRET: ${VEHICLESENSE_JWT_SECRET:?VEHICLESENSE_JWT_SECRET is required}
+      VEHICLESENSE_BOOTSTRAP_ADMIN_EMAIL: ${VEHICLESENSE_BOOTSTRAP_ADMIN_EMAIL:-}
+      VEHICLESENSE_BOOTSTRAP_ADMIN_PASSWORD: ${VEHICLESENSE_BOOTSTRAP_ADMIN_PASSWORD:-}
+      VEHICLESENSE_MQTT_ENABLED: "true"
+      VEHICLESENSE_MQTT_HOST: ${VEHICLESENSE_MQTT_HOST:?VEHICLESENSE_MQTT_HOST is required}
+      VEHICLESENSE_MQTT_PORT: ${VEHICLESENSE_MQTT_PORT:-8883}
+      VEHICLESENSE_MQTT_USERNAME: ${VEHICLESENSE_MQTT_USERNAME:?VEHICLESENSE_MQTT_USERNAME is required}
+      VEHICLESENSE_MQTT_PASSWORD: ${VEHICLESENSE_MQTT_PASSWORD:?VEHICLESENSE_MQTT_PASSWORD is required}
+      VEHICLESENSE_MQTT_CLIENT_ID: ${VEHICLESENSE_MQTT_CLIENT_ID:-vehiclesense-backend-production}
+      VEHICLESENSE_MQTT_TOPIC_PREFIX: ${VEHICLESENSE_MQTT_TOPIC_PREFIX:-vehiclesense/v1}
+      VEHICLESENSE_STALE_AFTER_SECONDS: ${VEHICLESENSE_STALE_AFTER_SECONDS:-45}
+      VEHICLESENSE_OFFLINE_AFTER_SECONDS: ${VEHICLESENSE_OFFLINE_AFTER_SECONDS:-120}
+      VEHICLESENSE_STATUS_SCAN_SECONDS: ${VEHICLESENSE_STATUS_SCAN_SECONDS:-15}
+      VEHICLESENSE_AUTO_REGISTER_DEVICES: ${VEHICLESENSE_AUTO_REGISTER_DEVICES:-false}
+    expose:
+      - "8000"
+    networks:
+      - edge
+      - database
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3)",
+        ]
+      interval: 20s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_DEMO_MODE: "false"
+    image: vehiclesense/frontend:${VEHICLESENSE_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
+
+  nginx:
+    image: nginx:1.30.4-alpine
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required}
+    volumes:
+      - ./nginx/${NGINX_TEMPLATE:-http.conf.template}:/etc/nginx/templates/default.conf.template:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=32m
+      - /var/run:size=4m
+      - /etc/nginx/conf.d:size=4m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 20s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  certbot:
+    image: certbot/certbot:v5.7.0
+    profiles: ["tls"]
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+
+volumes:
+  postgres_data:
+
+networks:
+  edge:
+  database:
+    internal: true

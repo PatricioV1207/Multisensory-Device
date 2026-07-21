@@ -157,20 +157,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(payload, status_code=200 if ready else 503)
 
     @app.websocket("/ws/v1/live")
-    async def live_socket(websocket: WebSocket, token: str | None = None):
-        if token is None:
-            await websocket.close(code=4401, reason="missing token")
-            return
+    async def live_socket(websocket: WebSocket):
+        await websocket.accept()
+        registered = False
         try:
+            authentication = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
+            if authentication.get("action") != "authenticate" or not isinstance(
+                authentication.get("token"), str
+            ):
+                await websocket.close(code=4401, reason="authentication required")
+                return
+            token = authentication["token"]
             claims = decode_token(token, "access", configured)
             async with app.state.database.sessions() as session:
                 user = await session.get(User, UUID(claims["sub"]))
             if user is None or not user.active:
                 raise jwt.InvalidTokenError("inactive user")
+        except TimeoutError:
+            await websocket.close(code=4401, reason="authentication timeout")
+            return
+        except WebSocketDisconnect:
+            return
         except (jwt.InvalidTokenError, ValueError):
             await websocket.close(code=4401, reason="invalid token")
             return
-        await app.state.live_updates.connect(websocket)
+        await app.state.live_updates.register(websocket)
+        registered = True
         await websocket.send_json({"type": "connection.ready", "role": user.role})
         try:
             while True:
@@ -196,7 +208,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except WebSocketDisconnect:
             pass
         finally:
-            await app.state.live_updates.disconnect(websocket)
+            if registered:
+                await app.state.live_updates.disconnect(websocket)
 
     return app
 

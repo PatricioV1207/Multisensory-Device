@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from tests.conftest import contract_fixture
@@ -68,12 +70,21 @@ def test_ingested_telemetry_reaches_rest_and_websocket(
     assert dashboard["vehicles"][0]["latest_telemetry"]["temperature_c"] == 24.7
 
     token = admin_headers["Authorization"].split(" ", 1)[1]
-    with api_client.websocket_connect(f"/ws/v1/live?token={token}") as socket:
+    with api_client.websocket_connect("/ws/v1/live") as socket:
+        socket.send_json({"action": "authenticate", "token": token})
         assert socket.receive_json()["type"] == "connection.ready"
         socket.send_json({"action": "subscribe", "vehicle_ids": ["sim-vehicle-001"]})
         assert socket.receive_json()["type"] == "subscription.updated"
         socket.send_json({"action": "ping"})
         assert socket.receive_json() == {"type": "pong"}
+
+
+def test_websocket_rejects_missing_authentication_message(api_client: TestClient) -> None:
+    with pytest.raises(WebSocketDisconnect) as rejected:
+        with api_client.websocket_connect("/ws/v1/live") as socket:
+            socket.send_json({"action": "subscribe", "vehicle_ids": []})
+            socket.receive_json()
+    assert rejected.value.code == 4401
 
 
 def test_health_and_command_queue_without_mqtt(

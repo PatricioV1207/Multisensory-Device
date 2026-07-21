@@ -7,12 +7,11 @@ import type { LiveMessage } from "../types/api";
 export type LiveConnectionState =
   "connecting" | "connected" | "reconnecting" | "offline" | "demo";
 
-function websocketUrl(token: string): string {
+function websocketUrl(): string {
   const configured = import.meta.env.VITE_WS_BASE_URL?.replace(/\/$/, "");
-  if (configured)
-    return `${configured}/ws/v1/live?token=${encodeURIComponent(token)}`;
+  if (configured) return `${configured}/ws/v1/live`;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws/v1/live?token=${encodeURIComponent(token)}`;
+  return `${protocol}//${window.location.host}/ws/v1/live`;
 }
 
 export function useLiveUpdates(vehicleIds: string[] = []): LiveConnectionState {
@@ -25,8 +24,7 @@ export function useLiveUpdates(vehicleIds: string[] = []): LiveConnectionState {
 
   useEffect(() => {
     if (isDemoMode) return;
-    const token = getAccessToken();
-    if (!token) return;
+    if (!getAccessToken()) return;
     const subscriptionIds = subscriptionKey ? subscriptionKey.split(",") : [];
     let socket: WebSocket | null = null;
     let timer: number | null = null;
@@ -34,10 +32,16 @@ export function useLiveUpdates(vehicleIds: string[] = []): LiveConnectionState {
 
     const connect = () => {
       setState(reconnectAttempt.current ? "reconnecting" : "connecting");
-      socket = new WebSocket(websocketUrl(token));
+      socket = new WebSocket(websocketUrl());
       socket.onopen = () => {
-        reconnectAttempt.current = 0;
-        setState("connected");
+        const currentToken = getAccessToken();
+        if (!currentToken) {
+          socket?.close();
+          return;
+        }
+        socket?.send(
+          JSON.stringify({ action: "authenticate", token: currentToken }),
+        );
       };
       socket.onmessage = (event) => {
         let message: LiveMessage;
@@ -47,6 +51,8 @@ export function useLiveUpdates(vehicleIds: string[] = []): LiveConnectionState {
           return;
         }
         if (message.type === "connection.ready") {
+          reconnectAttempt.current = 0;
+          setState("connected");
           socket?.send(
             JSON.stringify({
               action: "subscribe",
