@@ -96,6 +96,7 @@ bool VehicleSenseMqttClient::buildIdentityAndStatus(uint32_t bootId) {
 }
 
 void VehicleSenseMqttClient::update(uint32_t nowMs, bool networkReady) {
+  expirePendingTelemetry(nowMs);
   if (!_configured || _client == nullptr || !networkReady) {
     return;
   }
@@ -252,6 +253,7 @@ bool VehicleSenseMqttClient::publishTelemetry(const char* payload,
   portENTER_CRITICAL(&_sharedMux);
   _pendingTelemetryMessageId = messageId;
   _pendingTelemetryToken = token;
+  _pendingTelemetryStartedMs = millis();
   portEXIT_CRITICAL(&_sharedMux);
   return true;
 }
@@ -274,6 +276,7 @@ void VehicleSenseMqttClient::handlePublished(int messageId, uint32_t nowMs) {
     _telemetryAckReady = true;
     _pendingTelemetryMessageId = -1;
     _pendingTelemetryToken = 0U;
+    _pendingTelemetryStartedMs = 0U;
   }
   portEXIT_CRITICAL(&_sharedMux);
 }
@@ -367,6 +370,31 @@ bool VehicleSenseMqttClient::isConnected() const {
 
 bool VehicleSenseMqttClient::isReconnecting() const {
   return _configured && _started && !_connected;
+}
+
+bool VehicleSenseMqttClient::hasPendingTelemetry() {
+  bool pending = false;
+  portENTER_CRITICAL(&_sharedMux);
+  pending = _pendingTelemetryMessageId >= 0;
+  portEXIT_CRITICAL(&_sharedMux);
+  return pending;
+}
+
+void VehicleSenseMqttClient::expirePendingTelemetry(uint32_t nowMs) {
+  bool expired = false;
+  portENTER_CRITICAL(&_sharedMux);
+  if (_pendingTelemetryMessageId >= 0 && _pendingTelemetryStartedMs != 0U &&
+      static_cast<uint32_t>(nowMs - _pendingTelemetryStartedMs) >=
+          MQTT_PUBACK_TIMEOUT_MS) {
+    _pendingTelemetryMessageId = -1;
+    _pendingTelemetryToken = 0U;
+    _pendingTelemetryStartedMs = 0U;
+    expired = true;
+  }
+  portEXIT_CRITICAL(&_sharedMux);
+  if (expired) {
+    Logger::warn("MQTT", "PUBACK timeout; durable record remains queued");
+  }
 }
 
 int32_t VehicleSenseMqttClient::lastError() const {

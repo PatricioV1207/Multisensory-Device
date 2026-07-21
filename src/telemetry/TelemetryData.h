@@ -104,10 +104,12 @@ struct AcousticData {
 };
 
 struct OfflineDeliveryStatus {
+  bool ready = false;
   uint32_t queued = 0;
   uint32_t replayed = 0;
   uint32_t dropped = 0;
   uint32_t oldestAgeSeconds = 0;
+  uint64_t bytes = 0;
 };
 
 struct TelemetryData {

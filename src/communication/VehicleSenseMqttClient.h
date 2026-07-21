@@ -22,6 +22,7 @@ class VehicleSenseMqttClient {
   bool isStarted() const;
   bool isConnected() const;
   bool isReconnecting() const;
+  bool hasPendingTelemetry();
   int32_t lastError() const;
   const MqttTopics& topics() const;
 
@@ -32,6 +33,7 @@ class VehicleSenseMqttClient {
   void handleDisconnected(uint32_t nowMs);
   void handlePublished(int messageId, uint32_t nowMs);
   void handleIncomingData(esp_mqtt_event_handle_t event);
+  void expirePendingTelemetry(uint32_t nowMs);
   void scheduleReconnect(uint32_t nowMs);
   void increaseBackoff();
   bool buildIdentityAndStatus(uint32_t bootId);
@@ -56,6 +58,7 @@ class VehicleSenseMqttClient {
   portMUX_TYPE _sharedMux = portMUX_INITIALIZER_UNLOCKED;
   int _pendingTelemetryMessageId = -1;
   uint32_t _pendingTelemetryToken = 0;
+  uint32_t _pendingTelemetryStartedMs = 0;
   bool _telemetryAckReady = false;
   uint32_t _acknowledgedToken = 0;
   uint32_t _acknowledgedAtMs = 0;

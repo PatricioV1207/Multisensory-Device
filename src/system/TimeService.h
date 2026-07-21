@@ -18,6 +18,7 @@ class TimeService {
   bool isValid() const;
   TimeSource source() const;
   const char* sourceName() const;
+  uint64_t epochSeconds() const;
   bool formatIso8601(char* output, size_t outputSize) const;
 
  private:

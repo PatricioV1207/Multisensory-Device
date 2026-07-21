@@ -349,6 +349,12 @@ void ModuleTestRunner::updateLocalWebMock(uint32_t nowMs) {
   _localWebData.mqtt.lastPublishOk = true;
   _localWebData.mqtt.lastPublishSuccessMs = nowMs;
   _localWebData.mqtt.lastPublishAckMs = nowMs;
+  _localWebData.offline.ready = true;
+  _localWebData.offline.queued = 3;
+  _localWebData.offline.replayed = 4;
+  _localWebData.offline.dropped = 0;
+  _localWebData.offline.oldestAgeSeconds = 25;
+  _localWebData.offline.bytes = 4096;
   _localWebData.wifi.accessPointRunning = _web.isRunning();
   const String accessPointIp = _web.localIp();
   if (_web.isRunning()) {

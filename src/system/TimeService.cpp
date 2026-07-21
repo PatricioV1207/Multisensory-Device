@@ -89,6 +89,13 @@ const char* TimeService::sourceName() const {
   }
 }
 
+uint64_t TimeService::epochSeconds() const {
+  if (!isValid()) {
+    return 0U;
+  }
+  return static_cast<uint64_t>(time(nullptr));
+}
+
 bool TimeService::formatIso8601(char* output, size_t outputSize) const {
   if (output == nullptr || outputSize < 21U || !isValid()) {
     if (output != nullptr && outputSize > 0U) {

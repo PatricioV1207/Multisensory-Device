@@ -16,6 +16,8 @@ Pruebas de payload sin placa:
 pio test -e test_payload_json
 pio test -e test_barometer_math
 pio test -e test_local_web_json
+pio test -e test_mqtt_topics
+pio test -e test_offline_queue
 ```
 
 ## Orden obligatorio
@@ -38,7 +40,9 @@ pio test -e test_local_web_json
 15. `test_sim800l_mqtt_tls`: comprobar TLS/SNI con el broker real.
 16. `test_local_web`: revisar dashboard y APIs; `test_local_ota`: autenticación
     y actualización con un binario válido.
-17. Ejecutar las pruebas nativas y después `full_prototype_cellular` durante al
+17. Configurar HiveMQ y ejecutar `vehiclesense_wifi`: TLS, LWT, PUBACK y
+    reconexión.
+18. Ejecutar las pruebas nativas y después `vehiclesense_wifi` durante al
     menos 60 minutos con fallos parciales inducidos.
 
 ## BH1750 y bus I2C
@@ -56,6 +60,24 @@ validar el reintento. GPIO5 debe permanecer alto durante reset; usa un pull-up
 de 10 kΩ si el módulo no lo garantiza. El test no borra archivos ni simula por
 software una tarjeta llena: esa condición se comprueba con una tarjeta de
 prueba sin espacio disponible.
+
+En `vehiclesense_wifi` también debe crearse `/spool`. Para validar la entrega
+offline:
+
+1. Con HiveMQ conectado, confirma que `queued` vuelve a cero solo después de
+   un PUBACK.
+2. Apaga el punto de acceso a Internet durante al menos tres intervalos de
+   telemetría. `queued` debe crecer y los JSONL deben continuar.
+3. Reinicia el ESP32 todavía sin Internet. La cola debe reconstruir el mismo
+   número de archivos pendientes.
+4. Restaura Internet. Las muestras deben salir en orden con el `sample_id`
+   original y `replayed=true`; después del PUBACK desaparecen de `/spool`.
+5. Ejecuta `pio test -e test_offline_queue` para comprobar tokens, límites,
+   decisión de replay y cálculo de antigüedad sin hardware.
+
+No se prueba el límite usando la tarjeta de trabajo: usa otra tarjeta y reduce
+temporalmente `OFFLINE_QUEUE_MAX_RECORDS`. Al excederlo debe aumentar
+`dropped`, conservarse el límite y continuar el loop.
 
 ## SIM800L, GPRS y MQTT
 
@@ -79,13 +101,13 @@ Configura `LOCAL_AP_SSID`, `LOCAL_AP_PASSWORD`, `LOCAL_ADMIN_USERNAME` y
 
 - `GET /`, `/api/status` y `/api/telemetry/basic` desde un teléfono conectado
   al AP.
-- Ausencia de latitud, longitud, satélites, velocidad y altitud GPS en HTML y
-  en ambas APIs.
+- Estado, coordenadas y calidad GPS como texto, sin mapa, ruta ni dependencias
+  web externas.
 - Respuesta `401` en `/admin` con credenciales ausentes o incorrectas.
 
 Para OTA, la primera carga se realiza por USB. Compila
-`full_prototype_cellular`, abre `/admin` y sube
-`.pio/build/full_prototype_cellular/firmware.bin`. Verifica primero el rechazo
+`vehiclesense_wifi`, abre `/admin` y sube
+`.pio/build/vehiclesense_wifi/firmware.bin`. Verifica primero el rechazo
 de un archivo no válido y luego un binario correcto. El ESP32 solo debe
 reiniciarse tras finalizar `Update.end(true)` correctamente. Conserva USB como
 método de recuperación.
@@ -179,12 +201,15 @@ comparando con la presión normalizada de una aplicación meteorológica.
   ocultar los demás.
 - WiFi/MQTT: al apagar y restaurar la red debe reconectar automáticamente.
 - BH1750: valores finitos y no negativos; desconectarlo no detiene el bus.
-- microSD: cada muestra se guarda antes del intento MQTT; fallo o extracción no
-  detienen el loop.
+- microSD: cada muestra se archiva y permanece en el spool hasta PUBACK; fallo
+  o extracción no detienen el loop.
+- Cola offline: límites de registros/bytes, replay tras reinicio, eliminación
+  únicamente por PUBACK y `sample_id` estable.
 - SIM800L: AT, SIM, registro 2G y GPRS se distinguen como estados separados.
 - MQTT celular: la prueba TCP usa datos sintéticos; la integración real queda
   bloqueada si TLS no está habilitado o no conecta.
-- Web local: dashboard responsive, APIs parseables y ninguna clave GPS.
+- Web local: dashboard responsive, APIs parseables, GPS solo textual y ningún
+  mapa o recurso externo.
 - OTA: administrador protegido, archivo inválido rechazado y calibración BMP180
   conservada después de reiniciar.
 - JSON: todos los tests Unity deben finalizar en `PASSED`.

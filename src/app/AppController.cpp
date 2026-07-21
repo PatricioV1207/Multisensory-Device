@@ -7,6 +7,7 @@
 #include "calibration/BarometerCalibrationStore.h"
 #include "config.h"
 #include "pins.h"
+#include "storage/OfflineQueuePolicy.h"
 #include "telemetry/TelemetryBuilder.h"
 #include "telemetry/TelemetryValidator.h"
 #include "utils/Logger.h"
@@ -55,6 +56,9 @@ void AppController::begin() {
   _wifi.begin();
   _light.begin();
   _storage.begin();
+  if (_identity.isValid() && _storage.isReady()) {
+    _offlineQueue.begin(_identity.bootId());
+  }
   _web.begin(true);
   if (_identity.isValid()) {
     _secureMqtt.begin(_identity.bootId());
@@ -123,6 +127,7 @@ void AppController::update() {
   _storage.update(nowMs);
   _wifi.update(nowMs);
   _time.update(nowMs, _wifi.isConnected(), _gps.getData());
+  _offlineQueue.update(nowMs, _time.epochSeconds(), _storage.isReady());
   _secureMqtt.update(nowMs, _wifi.isConnected() && _time.isValid());
   processVehicleSenseMqtt(nowMs);
   _web.update(nowMs);
@@ -159,6 +164,7 @@ void AppController::buildSnapshot(uint32_t nowMs) {
   _telemetry.wifiConnected = _wifi.isConnected();
   _telemetry.wifiRssiDbm = _wifi.rssi();
   _telemetry.mqttConnected = _secureMqtt.isConnected();
+  _telemetry.offline = _offlineQueue.getStatus();
 #endif
   TelemetryValidator::validate(_telemetry, nowMs);
 }
@@ -205,12 +211,24 @@ void AppController::publishTelemetry(uint32_t nowMs) {
 #endif
 
 #if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  const bool deferred = !_secureMqtt.isConnected() ||
+                        _secureMqtt.hasPendingTelemetry() ||
+                        _offlineQueue.hasPending();
+  if (_offlineQueue.isReady() &&
+      _offlineQueue.enqueue(_payload, written, nowMs, _time.epochSeconds(),
+                            deferred)) {
+    Logger::info("QUEUE", "Telemetry retained until MQTT PUBACK");
+    return;
+  }
+  Logger::warn("QUEUE", "Durable spool unavailable; trying live delivery");
   if (!_secureMqtt.isConnected()) {
-    Logger::warn("MQTT", "v3 sample not published; HiveMQ offline");
+    Logger::warn("MQTT", "v3 sample unavailable for delivery while offline");
     return;
   }
   _mqttStatus.lastPublishAttemptMs = nowMs;
-  if (_secureMqtt.publishTelemetry(_payload, written, _telemetry.sequence)) {
+  if (_secureMqtt.publishTelemetry(
+          _payload, written,
+          OfflineQueuePolicy::liveToken(_telemetry.sequence))) {
     _mqttStatus.lastPublishOk = false;
     Logger::info("MQTT", "Telemetry queued with QoS 1; awaiting PUBACK");
   } else {
@@ -248,7 +266,40 @@ void AppController::processVehicleSenseMqtt(uint32_t nowMs) {
     _mqttStatus.lastPublishSuccessMs = acknowledgedAtMs;
     _mqttStatus.lastPublishAckMs = acknowledgedAtMs;
     _mqttStatus.lastAcknowledgedToken = token;
+    if (OfflineQueuePolicy::isReplayToken(token)) {
+      const uint32_t recordId =
+          OfflineQueuePolicy::recordIdFromToken(token);
+      if (!_offlineQueue.acknowledge(recordId)) {
+        Logger::warn("QUEUE", "PUBACK record could not be removed id=" +
+                                  String(recordId));
+      }
+    }
     Logger::info("MQTT", "Telemetry PUBACK token=" + String(token));
+  }
+
+  if (_secureMqtt.isConnected() && !_secureMqtt.hasPendingTelemetry() &&
+      _offlineQueue.hasPending() &&
+      static_cast<uint32_t>(nowMs - _lastReplayAttemptMs) >=
+          OFFLINE_QUEUE_REPLAY_INTERVAL_MS) {
+    _lastReplayAttemptMs = nowMs;
+    size_t replayLength = 0U;
+    uint32_t recordId = 0U;
+    bool replayed = false;
+    if (_offlineQueue.peek(_replayPayload, sizeof(_replayPayload),
+                           &replayLength, &recordId, &replayed)) {
+      _mqttStatus.lastPublishAttemptMs = nowMs;
+      const uint32_t replayToken = OfflineQueuePolicy::replayToken(recordId);
+      if (_offlineQueue.markAttempted(recordId, replayed) &&
+          _secureMqtt.publishTelemetry(_replayPayload, replayLength,
+                                       replayToken)) {
+        _mqttStatus.lastPublishOk = false;
+        Logger::info("QUEUE", "Queued record sent id=" + String(recordId) +
+                                  (replayed ? " replayed=true" :
+                                              " replayed=false"));
+      } else {
+        Logger::warn("QUEUE", "Queued record publish attempt failed");
+      }
+    }
   }
 
   size_t commandLength = 0;

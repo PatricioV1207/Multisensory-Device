@@ -13,6 +13,7 @@
 #include "sensors/BH1750Sensor.h"
 #include "sensors/gy801/GY801IMU.h"
 #include "storage/MicroSDLogger.h"
+#include "storage/OfflineTelemetryQueue.h"
 #include "system/DeviceIdentity.h"
 #include "system/TimeService.h"
 #include "telemetry/TelemetryData.h"
@@ -36,6 +37,7 @@ class AppController {
   GY801IMU _gy801;
   BH1750Sensor _light;
   MicroSDLogger _storage;
+  OfflineTelemetryQueue _offlineQueue;
   SIM800LModem _modem;
   LocalWebServer _web;
   WiFiManagerCustom _wifi;
@@ -49,7 +51,9 @@ class AppController {
   MqttRuntimeStatus _mqttStatus;
   uint32_t _lastTelemetryMs = 0;
   uint32_t _lastWebSnapshotMs = 0;
+  uint32_t _lastReplayAttemptMs = 0;
   char _payload[TELEMETRY_PAYLOAD_BUFFER_SIZE] = {0};
+  char _replayPayload[TELEMETRY_PAYLOAD_BUFFER_SIZE] = {0};
   char _sampleId[128] = {0};
   char _measuredAt[32] = {0};
   char _commandBuffer[MQTT_COMMAND_BUFFER_SIZE] = {0};

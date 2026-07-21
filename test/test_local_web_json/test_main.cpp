@@ -48,6 +48,12 @@ LocalWebData sample() {
   data.wifi.rssiDbm = -58;
   strcpy(data.wifi.stationIp, "192.168.1.42");
   strcpy(data.wifi.accessPointIp, "192.168.4.1");
+  data.offline.ready = true;
+  data.offline.queued = 3;
+  data.offline.replayed = 4;
+  data.offline.dropped = 1;
+  data.offline.oldestAgeSeconds = 25;
+  data.offline.bytes = 4096;
   data.ota.enabled = true;
   return data;
 }
@@ -88,6 +94,9 @@ void test_status_endpoint_contains_vehicle_wifi_and_delivery_state() {
   TEST_ASSERT_EQUAL_STRING("192.168.4.1", document["wifi"]["ap_ip"]);
   TEST_ASSERT_EQUAL(12U,
                     document["mqtt"]["last_acknowledged_token"].as<unsigned>());
+  TEST_ASSERT_TRUE(document["offline"]["ready"].as<bool>());
+  TEST_ASSERT_EQUAL(3U, document["offline"]["queued"].as<unsigned>());
+  TEST_ASSERT_EQUAL(4096U, document["offline"]["bytes"].as<unsigned>());
   TEST_ASSERT_FALSE(document["gps"].is<JsonObject>());
   TEST_ASSERT_NULL(strstr(output, "latitude"));
   TEST_ASSERT_NULL(strstr(output, "longitude"));

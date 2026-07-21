@@ -90,10 +90,12 @@ bool LocalWebJsonBuilder::buildStatus(const LocalWebData& data, char* output,
   mqtt["state"] = data.mqtt.clientState;
 
   JsonObject offline = document["offline"].to<JsonObject>();
+  offline["ready"] = data.offline.ready;
   offline["queued"] = data.offline.queued;
   offline["replayed"] = data.offline.replayed;
   offline["dropped"] = data.offline.dropped;
   offline["oldest_age_s"] = data.offline.oldestAgeSeconds;
+  offline["bytes"] = data.offline.bytes;
 
   JsonObject ota = document["ota"].to<JsonObject>();
   ota["enabled"] = data.ota.enabled;

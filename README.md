@@ -40,7 +40,10 @@ datos independientes; `TelemetryValidator` comprueba vigencia y rango;
 La referencia del BMP180 puede calibrarse con una altitud conocida o con un fix
 GPS controlado y persistirse en NVS.
 
-`full_prototype` conserva el transporte MQTT por WiFi. El environment
+`full_prototype` conserva el transporte MQTT por WiFi. `vehiclesense_wifi` es
+el perfil actual: AP+STA, BH1750, microSD, página/OTA, tiempo NTP/GPS y MQTT
+QoS 1 sobre TLS hacia HiveMQ Cloud. Cada muestra queda en un spool SD acotado
+hasta recibir PUBACK, además del archivo JSONL de auditoría. El environment
 `full_prototype_cellular` añade BH1750, microSD, AP/web/OTA y transporte
 SIM800L. En este último, cada payload se guarda primero en la tarjeta y se
 publica después si GPRS, TLS y MQTT están disponibles.
@@ -89,9 +92,8 @@ Un broker MQTT convencional puede usar usuario, contraseña y tópico propios.
 El perfil WiFi existente utiliza MQTT sin TLS y debe considerarse una
 configuración de laboratorio.
 
-El destino de producción será HiveMQ Cloud por MQTT/TLS 8883 con ACL por
-dispositivo, LWT, estado retenido y QoS 1. Esa migración todavía no está activa
-en el firmware. La estructura objetivo está especificada en
+El perfil `vehiclesense_wifi` usa HiveMQ Cloud por MQTT/TLS 8883 con ACL por
+dispositivo, LWT, estado retenido y QoS 1. La estructura está especificada en
 [`contracts/mqtt-topics.md`](contracts/mqtt-topics.md).
 
 Para el perfil celular configura además APN, PIN opcional, broker TLS, Access
@@ -116,8 +118,9 @@ test_wifi          test_mqtt_wifi     test_payload_json
 test_barometer_math test_bh1750       test_microsd
 test_sim800l_at     test_sim800l_gprs test_sim800l_mqtt
 test_sim800l_mqtt_tls                 test_local_web
-test_local_ota      test_local_web_json
-full_prototype      full_prototype_cellular
+test_local_ota      test_local_web_json test_mqtt_topics
+test_offline_queue  full_prototype      full_prototype_cellular
+vehiclesense_wifi
 ```
 
 Los comandos y criterios PASS/FAIL se encuentran en
@@ -129,18 +132,20 @@ Los comandos y criterios PASS/FAIL se encuentran en
 - Verificación por dirección e ID para los cuatro chips GY-801.
 - Calibración persistente del BMP180 con altitud conocida o GPS.
 - Payload v2 parcial, reconexión y pruebas Unity implementados.
-- Respaldo JSONL, BH1750, estado celular, dashboard local y OTA implementados.
+- Respaldo JSONL, spool offline acotado, BH1750, estado celular conservado,
+  dashboard local y OTA implementados.
 - Auditoría VehicleSense completada: los 21 environments ESP32 compilan y las
   13 pruebas nativas existentes pasan.
 - Contratos MQTT VehicleSense v1 y telemetría v3 definidos, manteniendo un
   schema explícito para telemetría v2.
-- Pendiente: perfil WiFi seguro integrado, INMP441, backend, PostgreSQL,
-  frontend, simulador y despliegue.
+- Perfil `vehiclesense_wifi` integrado con AP+STA, NTP/GPS, HiveMQ/TLS, QoS 1,
+  LWT, tópicos por dispositivo y PUBACK.
+- Pendiente: validación física con credenciales HiveMQ/ACL, INMP441, backend,
+  PostgreSQL, frontend, simulador y despliegue.
 
 ## Roadmap
 
-- Perfil `vehiclesense_wifi` con AP+STA, NTP y MQTT/TLS hacia HiveMQ Cloud.
-- Cola offline acotada y replay idempotente desde microSD.
+- Validación física de `vehiclesense_wifi` contra HiveMQ Cloud.
 - INMP441 con nivel relativo, características espectrales y clasificador
   heurístico honesto preparado para un futuro dataset.
 - Backend FastAPI, PostgreSQL, REST/WebSocket, alertas y viajes.
