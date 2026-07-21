@@ -1,7 +1,9 @@
 #include "app/AppController.h"
 
 #include <Wire.h>
+#include <ArduinoJson.h>
 #include <esp_timer.h>
+#include <cstring>
 #include "calibration/BarometerCalibrationStore.h"
 #include "config.h"
 #include "pins.h"
@@ -51,8 +53,9 @@ void AppController::begin() {
   }
 #elif APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   _wifi.begin();
-  Logger::info("BOOT", "VehicleSense v3 enabled; secure MQTT follows in the "
-                       "next integration milestone");
+  if (_identity.isValid()) {
+    _secureMqtt.begin(_identity.bootId());
+  }
 #endif
   _mqttStatus.configured = _mqtt.isConfigured();
   Logger::info("BOOT", "Initialization complete; failures are non-fatal");
@@ -111,6 +114,8 @@ void AppController::update() {
 #elif APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   _wifi.update(nowMs);
   _time.update(nowMs, _wifi.isConnected(), _gps.getData());
+  _secureMqtt.update(nowMs, _wifi.isConnected() && _time.isValid());
+  processVehicleSenseMqtt(nowMs);
 #endif
 
   if (static_cast<uint32_t>(nowMs - _lastTelemetryMs) >= TELEMETRY_INTERVAL_MS) {
@@ -138,7 +143,7 @@ void AppController::buildSnapshot(uint32_t nowMs) {
   _telemetry.simulated = false;
   _telemetry.wifiConnected = _wifi.isConnected();
   _telemetry.wifiRssiDbm = _wifi.rssi();
-  _telemetry.mqttConnected = _mqtt.isConnected();
+  _telemetry.mqttConnected = _secureMqtt.isConnected();
 #endif
   TelemetryValidator::validate(_telemetry, nowMs);
 }
@@ -184,7 +189,17 @@ void AppController::publishTelemetry(uint32_t nowMs) {
 #endif
 
 #if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
-  Logger::debug("MQTT", "v3 sample prepared locally; secure transport not active yet");
+  if (!_secureMqtt.isConnected()) {
+    Logger::warn("MQTT", "v3 sample not published; HiveMQ offline");
+    return;
+  }
+  _mqttStatus.lastPublishAttemptMs = nowMs;
+  if (_secureMqtt.publishTelemetry(_payload, written, _telemetry.sequence)) {
+    _mqttStatus.lastPublishOk = false;
+    Logger::info("MQTT", "Telemetry queued with QoS 1; awaiting PUBACK");
+  } else {
+    Logger::warn("MQTT", "Telemetry queue busy or publish rejected");
+  }
   return;
 #endif
 
@@ -200,6 +215,87 @@ void AppController::publishTelemetry(uint32_t nowMs) {
   } else {
     _mqttStatus.lastPublishOk = false;
   }
+}
+
+void AppController::processVehicleSenseMqtt(uint32_t nowMs) {
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  _mqttStatus.configured = _secureMqtt.isConfigured();
+  _mqttStatus.connected = _secureMqtt.isConnected();
+  _mqttStatus.reconnecting = _secureMqtt.isReconnecting();
+  _mqttStatus.clientState =
+      static_cast<int16_t>(_secureMqtt.lastError() & 0x7FFF);
+
+  uint32_t token = 0;
+  uint32_t acknowledgedAtMs = 0;
+  if (_secureMqtt.takeTelemetryAck(token, acknowledgedAtMs)) {
+    _mqttStatus.lastPublishOk = true;
+    _mqttStatus.lastPublishSuccessMs = acknowledgedAtMs;
+    _mqttStatus.lastPublishAckMs = acknowledgedAtMs;
+    _mqttStatus.lastAcknowledgedToken = token;
+    Logger::info("MQTT", "Telemetry PUBACK token=" + String(token));
+  }
+
+  size_t commandLength = 0;
+  if (!_secureMqtt.takeCommand(_commandBuffer, sizeof(_commandBuffer),
+                               &commandLength)) {
+    return;
+  }
+  JsonDocument command;
+  const DeserializationError error =
+      deserializeJson(command, _commandBuffer, commandLength);
+  if (error || command["schema_version"].as<int>() != 1 ||
+      strcmp(command["message_type"] | "", "command") != 0) {
+    Logger::warn("MQTT", "Malformed command rejected without execution");
+    return;
+  }
+  const char* commandId = command["command_id"] | "";
+  const char* targetDevice = command["device_id"] | "";
+  const char* targetVehicle = command["vehicle_id"] | "";
+  if (commandId[0] == '\0' || strcmp(targetDevice, DEVICE_ID) != 0 ||
+      strcmp(targetVehicle, VEHICLE_ID) != 0) {
+    Logger::warn("MQTT", "Command target mismatch or missing command_id");
+    return;
+  }
+  acknowledgeUnsupportedCommand(commandId, nowMs);
+#else
+  (void)nowMs;
+#endif
+}
+
+void AppController::acknowledgeUnsupportedCommand(const char* commandId,
+                                                  uint32_t nowMs) {
+#if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
+  (void)nowMs;
+  JsonDocument ack;
+  ack["schema_version"] = 1;
+  ack["message_type"] = "command_ack";
+  ack["command_id"] = commandId;
+  ack["device_id"] = DEVICE_ID;
+  ack["vehicle_id"] = VEHICLE_ID;
+  ack["state"] = "unsupported";
+  ack["uptime_ms"] = static_cast<uint64_t>(esp_timer_get_time() / 1000LL);
+  const bool timeValid =
+      _time.formatIso8601(_measuredAt, sizeof(_measuredAt));
+  ack["time_valid"] = timeValid;
+  if (timeValid) {
+    ack["acknowledged_at"] = _measuredAt;
+  }
+  ack["error_code"] = "COMMAND_HANDLER_DEFERRED";
+  ack["message"] = "Command execution is not enabled in this firmware phase";
+  ack["simulated"] = false;
+  const size_t length =
+      serializeJson(ack, _commandAckPayload, sizeof(_commandAckPayload));
+  if (length == 0U || length >= sizeof(_commandAckPayload) ||
+      !_secureMqtt.publishCommandAck(_commandAckPayload, length)) {
+    Logger::warn("MQTT", "Command acknowledgement could not be queued");
+    return;
+  }
+  Logger::warn("MQTT", "Command acknowledged as unsupported; id=" +
+                           String(commandId));
+#else
+  (void)commandId;
+  (void)nowMs;
+#endif
 }
 
 void AppController::refreshLocalWebData(uint32_t nowMs) {

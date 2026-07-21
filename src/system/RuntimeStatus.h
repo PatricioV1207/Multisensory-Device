@@ -31,10 +31,13 @@ struct CellularStatus {
 struct MqttRuntimeStatus {
   bool configured = false;
   bool connected = false;
+  bool reconnecting = false;
   bool lastPublishOk = false;
   int16_t clientState = 0;
   uint32_t lastPublishAttemptMs = 0;
   uint32_t lastPublishSuccessMs = 0;
+  uint32_t lastPublishAckMs = 0;
+  uint32_t lastAcknowledgedToken = 0;
 };
 
 struct OtaStatus {

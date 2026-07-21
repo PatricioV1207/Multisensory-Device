@@ -165,6 +165,18 @@
 #define MQTT_SOCKET_TIMEOUT_SECONDS 3U
 #endif
 
+#ifndef VEHICLESENSE_MQTT_BUFFER_SIZE
+#define VEHICLESENSE_MQTT_BUFFER_SIZE 4096U
+#endif
+
+#ifndef VEHICLESENSE_MQTT_TASK_STACK_SIZE
+#define VEHICLESENSE_MQTT_TASK_STACK_SIZE 8192U
+#endif
+
+#ifndef MQTT_COMMAND_BUFFER_SIZE
+#define MQTT_COMMAND_BUFFER_SIZE 1024U
+#endif
+
 #ifndef TELEMETRY_PAYLOAD_BUFFER_SIZE
 #define TELEMETRY_PAYLOAD_BUFFER_SIZE 2048U
 #endif
@@ -299,6 +311,22 @@
 
 #ifndef MQTT_TOPIC
 #define MQTT_TOPIC "v1/devices/me/telemetry"
+#endif
+
+#ifndef HIVEMQ_HOST
+#define HIVEMQ_HOST ""
+#endif
+
+#ifndef HIVEMQ_PORT
+#define HIVEMQ_PORT 8883
+#endif
+
+#ifndef HIVEMQ_USERNAME
+#define HIVEMQ_USERNAME ""
+#endif
+
+#ifndef HIVEMQ_PASSWORD
+#define HIVEMQ_PASSWORD ""
 #endif
 
 #ifndef CELLULAR_APN

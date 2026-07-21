@@ -5,6 +5,7 @@
 #include "config.h"
 #include "communication/MQTTClientCustom.h"
 #include "communication/SIM800LModem.h"
+#include "communication/VehicleSenseMqttClient.h"
 #include "communication/WiFiManagerCustom.h"
 #include "diagnostics/ModuleTestRunner.h"
 #include "sensors/DHT11Sensor.h"
@@ -27,6 +28,8 @@ class AppController {
   void publishTelemetry(uint32_t nowMs);
   void refreshLocalWebData(uint32_t nowMs);
   void beginSharedSensors();
+  void processVehicleSenseMqtt(uint32_t nowMs);
+  void acknowledgeUnsupportedCommand(const char* commandId, uint32_t nowMs);
 
   DHT11Sensor _dht;
   GPSNeo6M _gps;
@@ -38,6 +41,7 @@ class AppController {
   WiFiManagerCustom _wifi;
   WiFiClient _wifiClient;
   MQTTClientCustom _mqtt;
+  VehicleSenseMqttClient _secureMqtt;
   ModuleTestRunner _testRunner;
   DeviceIdentity _identity;
   TimeService _time;
@@ -48,4 +52,6 @@ class AppController {
   char _payload[TELEMETRY_PAYLOAD_BUFFER_SIZE] = {0};
   char _sampleId[128] = {0};
   char _measuredAt[32] = {0};
+  char _commandBuffer[MQTT_COMMAND_BUFFER_SIZE] = {0};
+  char _commandAckPayload[768] = {0};
 };

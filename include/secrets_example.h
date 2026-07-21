@@ -18,6 +18,13 @@
 #define MQTT_PASSWORD ""
 #define MQTT_TOPIC "v1/devices/me/telemetry"
 
+// VehicleSense production transport: HiveMQ Cloud MQTT over TLS. The ESP32
+// uses the built-in CA bundle and still validates the broker hostname.
+#define HIVEMQ_HOST "YOUR_CLUSTER.s1.eu.hivemq.cloud"
+#define HIVEMQ_PORT 8883
+#define HIVEMQ_USERNAME "YOUR_HIVEMQ_DEVICE_USERNAME"
+#define HIVEMQ_PASSWORD "YOUR_HIVEMQ_DEVICE_PASSWORD"
+
 // SIM800L / GPRS. Confirm the APN with the mobile operator.
 #define CELLULAR_APN "YOUR_OPERATOR_APN"
 #define CELLULAR_APN_USER ""
