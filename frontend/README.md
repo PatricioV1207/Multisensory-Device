@@ -84,9 +84,10 @@ fuentes no existen en el hardware actual.
 ## Sesión y tiempo real
 
 Los access/refresh JWT se mantienen en `sessionStorage`. Un `401` intenta una
-renovación una sola vez; si falla, elimina la sesión. El WebSocket se autentica
-con el access token y reconecta con backoff entre 1 y 30 segundos. Los estados
-visibles son conectado, conectando, reconectando, no disponible y demo.
+renovación una sola vez; si falla, elimina la sesión. El WebSocket envía el
+access token en su primer frame de autenticación, nunca como query param, y
+reconecta con backoff entre 1 y 30 segundos. Los estados visibles son
+conectado, conectando, reconectando, no disponible y demo.
 
 En producción deben aplicarse HTTPS, CSP, `X-Frame-Options`, `nosniff` y demás
 cabeceras en Nginx. La sesión en navegador no sustituye controles de rol del

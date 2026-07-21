@@ -1,21 +1,19 @@
 # Payload de telemetría
 
-## Política temporal
+## Política temporal e identidad
 
-ThingsBoard asigna la fecha al recibir el mensaje. `uptime_ms` es tiempo desde
-el arranque, no Unix epoch. Un broker genérico debe fechar el mensaje al
-recibirlo o añadir NTP en una fase posterior.
-
-El perfil VehicleSense usa `schema_version=3`, identidad persistente y
-`time_valid`. Cuando NTP o GPS proporcionan UTC confiable incluye
-`measured_at`; si no, omite la fecha en vez de inventarla. El esquema v2 se
-mantiene para los perfiles heredados.
+`uptime_ms` es tiempo desde el arranque, no Unix epoch. El perfil VehicleSense
+usa `schema_version=3`, `vehicle_id`, `device_id`, `boot_id`, `sequence`,
+`sample_id` e identidad persistente. Cuando NTP o GPS proporcionan UTC
+confiable incluye `measured_at` y `time_valid=true`; si no, omite la fecha en
+vez de inventarla. El backend guarda además su `received_at`. El esquema v2 se
+mantiene para los perfiles heredados y ThingsBoard.
 
 ## Campos
 
 | Grupo | Campos | Unidad |
 |---|---|---|
-| Identidad | `schema_version=2`, `device_id`, `uptime_ms` | — |
+| Identidad v3 | `schema_version`, `vehicle_id`, `device_id`, `boot_id`, `sequence`, `sample_id`, `uptime_ms`, `measured_at` | — |
 | DHT11 | `temperature_c`, `humidity_percent` | °C, % |
 | GPS | `latitude`, `longitude`, `altitude_m`, `speed_kmh`, `satellites` | grados, m, km/h |
 | Acelerómetro | `accel_x`, `accel_y`, `accel_z` | m/s² calibrados |
@@ -23,13 +21,16 @@ mantiene para los perfiles heredados.
 | Magnetómetro | `mag_x`, `mag_y`, `mag_z` | µT |
 | Barómetro | `pressure_hpa`, `sea_level_pressure_hpa`, `baro_temperature_c`, `baro_altitude_m` | hPa, °C, m |
 | Luz | `light_lux` | lx |
-| Estado | `sd_valid`, `sim_valid`, `gprs_connected`, `gsm_csq` | — |
+| Estado | `sd_valid`, `wifi_connected`, `wifi_rssi_dbm`, `mqtt_connected`, contadores `offline_*` | — |
+| Celular heredado | `sim_valid`, `gprs_connected`, `gsm_csq` | — |
 | Acústica v3 | `mic_valid`, `acoustic_valid`, `acoustic_relative_level_dbfs`, `acoustic_peak_dbfs`, `acoustic_category`, `acoustic_confidence`, `acoustic_clipping` | dBFS relativo, — |
 
 Las banderas `dht_valid`, `gps_valid`, `accel_valid`, `gyro_valid`,
 `mag_valid`, `baro_valid` e `imu_valid` siempre aparecen. `imu_valid` exige
 acelerómetro, giroscopio y magnetómetro válidos; no depende del barómetro.
-También aparecen `bh1750_valid`, `sd_valid`, `sim_valid` y `gprs_connected`.
+En v3 también aparecen siempre `bh1750_valid`, `sd_valid`, `wifi_connected`,
+`mqtt_connected`, `mic_valid` y `acoustic_valid`. Los campos `sim_valid`,
+`gprs_connected` y `gsm_csq` pertenecen al perfil celular heredado;
 `gsm_csq` se omite cuando el módem devuelve señal desconocida.
 
 Los campos `accel_x`, `accel_y` y `accel_z` corresponden a la lectura calibrada
@@ -52,9 +53,17 @@ Un dato inválido se omite. Por ejemplo, si el GPS aún no tiene fix:
 
 ```json
 {
-  "schema_version": 2,
-  "device_id": "bus_iot_prototype_01",
+  "schema_version": 3,
+  "message_type": "telemetry",
+  "vehicle_id": "vehicle-001",
+  "device_id": "device-001",
+  "boot_id": 1234,
+  "sequence": 12,
+  "sample_id": "device-001:1234:12",
   "uptime_ms": 12000,
+  "time_valid": false,
+  "replayed": false,
+  "simulated": false,
   "dht_valid": true,
   "gps_valid": false,
   "accel_valid": false,
@@ -64,6 +73,11 @@ Un dato inválido se omite. Por ejemplo, si el GPS aún no tiene fix:
   "imu_valid": false,
   "bh1750_valid": false,
   "sd_valid": true,
+  "wifi_connected": true,
+  "wifi_rssi_dbm": -58,
+  "mqtt_connected": true,
+  "mic_valid": false,
+  "acoustic_valid": false,
   "sim_valid": false,
   "gprs_connected": false,
   "temperature_c": 25.0,

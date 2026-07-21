@@ -1,6 +1,7 @@
 # VehicleSense: auditoría técnica y plan de implementación
 
-Estado: fase 0 completada (auditoría y diseño; sin implementación funcional)
+Estado de este documento: auditoría histórica de fase 0. La implementación
+posterior ya existe; consulte el README raíz para el estado actual.
 
 Fecha de auditoría: 2026-07-20
 
@@ -720,4 +721,3 @@ No se necesitan todavía para comenzar las fases puramente de software. Sí se s
 - [INMP441 datasheet](https://invensense.tdk.com/wp-content/uploads/2015/02/INMP441.pdf)
 - [HiveMQ Cloud documentation](https://docs.hivemq.com/hivemq-cloud/)
 - [Oracle Cloud Free Tier](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier.htm)
-

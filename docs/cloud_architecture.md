@@ -61,17 +61,19 @@ reconexión; el WebSocket de FastAPI entrega solamente cambios en vivo.
 - distingue carga, ausencia de datos, sensor inválido, stale, offline y demo;
 - muestra mapas mediante OpenStreetMap/Leaflet sin credenciales MQTT.
 
-## Producción prevista en Oracle Cloud
+## Producción en Oracle Cloud
 
-La topología objetivo usa una VM Ubuntu ARM64/x86_64 con contenedores para
-Nginx, frontend estático, FastAPI y PostgreSQL. Solamente Nginx publica 80/443;
-FastAPI y PostgreSQL permanecen en la red privada de Compose. Los certificados,
-secrets, volumen PostgreSQL, health checks, backup, actualización y rollback se
-documentan junto con los artefactos de despliegue.
+`deploy/compose.production.yml` usa una VM Ubuntu ARM64/x86_64 con contenedores
+para Nginx, frontend estático, FastAPI y PostgreSQL. Solamente Nginx publica
+80/443; FastAPI no publica puertos y PostgreSQL permanece en una red Compose
+interna. Certbot, secrets, volumen PostgreSQL, health checks, backup,
+restauración, actualización y rollback están documentados en
+[`../deploy/README.md`](../deploy/README.md).
 
 ## Fuera de esta fase
 
-El firmware conserva el trabajo SIM800L, pero el transporte activo de esta
-fase es WiFi. La conectividad celular no se depura ni se convierte en una
-dependencia del backend. El clasificador acústico seguirá siendo heurístico
-hasta contar con grabaciones reales etiquetadas en la instalación final.
+El firmware conserva el trabajo SIM800L, pero el transporte activo es WiFi. La
+conectividad celular no se convierte en una dependencia del backend. El
+clasificador acústico seguirá siendo heurístico hasta contar con grabaciones
+reales etiquetadas en la instalación final. Producción en una sola VM tampoco
+ofrece alta disponibilidad.

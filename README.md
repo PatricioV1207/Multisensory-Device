@@ -1,159 +1,196 @@
-# VehicleSense — plataforma de monitoreo vehicular
+# VehicleSense — monitoreo vehicular IoT
 
-## Overview
-
-VehicleSense es una plataforma de monitoreo multisensorial para vehículos de
-propósito general. El repositorio contiene hoy el firmware modular PlatformIO
-del ESP32 y está evolucionando, por fases, hacia una solución integrada con
-HiveMQ Cloud, backend, PostgreSQL y aplicación web de flota.
-
-El firmware existente lee DHT11, GPS NEO-6M, GY-801 y BH1750; puede respaldar
-telemetría en microSD y publicarla por MQTT sobre WiFi. También conserva un
-perfil experimental SIM800L y una página local con OTA. La fase activa utilizará
-WiFi; el trabajo celular se preserva pero queda diferido.
-
-Los fallos son parciales: un sensor ausente no detiene el GPS, la red ni los
-demás componentes. Las mediciones inválidas se omiten del JSON y se conservan
-banderas de estado explícitas.
-
-## Hardware actual y ampliación prevista
-
-- ESP32 DevKit V1 / NodeMCU-32 de 30 pines.
-- DHT11.
-- GPS NEO-6M.
-- GY-801: ADXL345, L3G4200D, HMC5883L y BMP180/BMP085.
-- BH1750.
-- Módulo microSD SPI.
-- SIM800L V2 con fuente independiente adecuada.
-- WiFi integrado del ESP32.
-- INMP441 I2S integrado en firmware; validación física pendiente.
-
-No se incluyen BME280, SIM7600, OBD-II ni mediciones de combustible o batería
-del vehículo. Los valores no disponibles no se sustituyen por cero.
-
-## Arquitectura
-
-`main.cpp` delega en `AppController`. Los sensores producen estructuras de
-datos independientes; `TelemetryValidator` comprueba vigencia y rango;
-`TelemetryBuilder` serializa únicamente valores válidos; y
-`MQTTClientCustom` publica usando un transporte `Client` intercambiable.
-La referencia del BMP180 puede calibrarse con una altitud conocida o con un fix
-GPS controlado y persistirse en NVS.
-
-`full_prototype` conserva el transporte MQTT por WiFi. `vehiclesense_wifi` es
-el perfil actual: AP+STA, BH1750, microSD, página/OTA, tiempo NTP/GPS y MQTT
-QoS 1 sobre TLS hacia HiveMQ Cloud. Cada muestra queda en un spool SD acotado
-hasta recibir PUBACK, además del archivo JSONL de auditoría. El environment
-`full_prototype_cellular` añade BH1750, microSD, AP/web/OTA y transporte
-SIM800L. En este último, cada payload se guarda primero en la tarjeta y se
-publica después si GPRS, TLS y MQTT están disponibles.
-
-La arquitectura objetivo mantiene el firmware en la raíz y añade componentes
-separados en `backend/`, `frontend/`, `simulator/` y `deploy/`. Los contratos
-versionados viven en [`contracts/`](contracts/README.md). La auditoría y la hoja
-de ruta completa están en
-[`docs/vehiclesense_implementation_plan.md`](docs/vehiclesense_implementation_plan.md).
-
-Consulta [docs/architecture.md](docs/architecture.md) para el flujo completo.
-
-## Instalación
-
-1. Instala PlatformIO Core o la extensión PlatformIO para VS Code.
-2. Abre esta carpeta como proyecto.
-3. Compila el entorno WiFi o el perfil celular:
-
-```bash
-pio run -e full_prototype
-pio run -e full_prototype_cellular
-```
-
-4. Conecta primero únicamente el GY-801 y ejecuta el scanner:
-
-```bash
-pio run -e test_i2c_scanner -t upload
-pio device monitor -b 115200
-```
-
-La guía de conexiones está en [docs/wiring.md](docs/wiring.md).
-
-## Configuración de red, AP y MQTT actual
-
-Copia `include/secrets_example.h` como `include/secrets.h` y reemplaza los
-valores de ejemplo. El archivo local está excluido de Git.
-
-ThingsBoard usa normalmente:
-
-- Puerto: `1883`.
-- Usuario: access token del dispositivo.
-- Contraseña: vacía.
-- Topic: `v1/devices/me/telemetry`.
-
-Un broker MQTT convencional puede usar usuario, contraseña y tópico propios.
-El perfil WiFi existente utiliza MQTT sin TLS y debe considerarse una
-configuración de laboratorio.
-
-El perfil `vehiclesense_wifi` usa HiveMQ Cloud por MQTT/TLS 8883 con ACL por
-dispositivo, LWT, estado retenido y QoS 1. La estructura está especificada en
-[`contracts/mqtt-topics.md`](contracts/mqtt-topics.md).
-
-Para el perfil celular configura además APN, PIN opcional, broker TLS, Access
-Point y credenciales del administrador. El MQTT celular real requiere TLS de
-forma predeterminada; no degrada silenciosamente a texto plano si el SIM800L no
-supera TLS/SNI. El environment `test_sim800l_mqtt` usa únicamente datos
-sintéticos para validar TCP/1883.
-
-Consulta [docs/cellular_mqtt.md](docs/cellular_mqtt.md),
-[docs/storage.md](docs/storage.md) y
-[docs/local_web_ota.md](docs/local_web_ota.md). El alcance, privacidad y
-limitaciones del INMP441 están en
-[docs/acoustic_monitoring.md](docs/acoustic_monitoring.md).
-
-## Pruebas modulares
-
-Los environments disponibles son:
+VehicleSense es una plataforma general de monitoreo multisensorial para
+vehículos. Integra firmware ESP32 tolerante a fallos, monitoreo local sin
+Internet, entrega segura por HiveMQ Cloud, backend histórico, PostgreSQL,
+aplicación web responsive y un simulador multivehículo.
 
 ```text
-test_dht11         test_gps           test_i2c_scanner
-test_adxl345       test_l3g4200d      test_hmc5883l
-test_bmp180        calibrate_bmp180   test_gy801
-test_wifi          test_mqtt_wifi     test_payload_json
-test_barometer_math test_bh1750       test_microsd
-test_sim800l_at     test_sim800l_gprs test_sim800l_mqtt
-test_sim800l_mqtt_tls                 test_local_web
-test_local_ota      test_local_web_json test_mqtt_topics
-test_offline_queue  full_prototype      full_prototype_cellular
-vehiclesense_wifi
-test_inmp441       collect_acoustic_features test_acoustic_classifier
+Sensores + ESP32 ── WiFi/MQTT TLS ──► HiveMQ Cloud
+       │                                      │
+       ├── página local                       ▼
+       ├── JSONL + spool SD             FastAPI backend
+       └── OTA local                          │
+                                              ▼
+                                         PostgreSQL
+                                              │
+                                    REST + WebSocket seguro
+                                              │
+                                              ▼
+                                     React VehicleSense
 ```
 
-Los comandos y criterios PASS/FAIL se encuentran en
-[docs/tests.md](docs/tests.md).
+El sistema no inventa ceros para datos ausentes: conserva banderas de validez,
+omite `NaN` y distingue muestras reales, simuladas, en vivo y reproducidas.
+SIM800L permanece en el repositorio como fase experimental diferida; la ruta de
+producción actual usa WiFi.
 
-## Estado actual
+## Componentes del repositorio
 
-- Arquitectura y drivers implementados.
-- Verificación por dirección e ID para los cuatro chips GY-801.
-- Calibración persistente del BMP180 con altitud conocida o GPS.
-- Payload v2 parcial, reconexión y pruebas Unity implementados.
-- Respaldo JSONL, spool offline acotado, BH1750, estado celular conservado,
-  dashboard local y OTA implementados.
-- Auditoría VehicleSense completada: los 21 environments ESP32 compilan y las
-  13 pruebas nativas existentes pasan.
-- Contratos MQTT VehicleSense v1 y telemetría v3 definidos, manteniendo un
-  schema explícito para telemetría v2.
-- Perfil `vehiclesense_wifi` integrado con AP+STA, NTP/GPS, HiveMQ/TLS, QoS 1,
-  LWT, tópicos por dispositivo y PUBACK.
-- INMP441 integrado con nivel dBFS relativo, FFT, características, categorías
-  heurísticas, alertas sostenidas y colección etiquetada sin audio crudo.
-- Pendiente: validación física de INMP441 y de credenciales HiveMQ/ACL, backend,
-  PostgreSQL, frontend, simulador y despliegue.
+| Ruta | Responsabilidad |
+|---|---|
+| `src/`, `include/` | Firmware PlatformIO/Arduino para ESP32 |
+| `contracts/` | Tópicos y JSON Schema compartidos |
+| `backend/` | FastAPI, MQTT, PostgreSQL, REST, WebSocket y alertas |
+| `frontend/` | React/TypeScript, dashboard, mapas e históricos |
+| `simulator/` | Dispositivos MQTT sintéticos identificados como demo |
+| `deploy/` | Docker Compose, Nginx, HTTPS, backup y guía OCI |
+| `docs/` | Cableado, pruebas, telemetría, seguridad y operación |
 
-## Roadmap
+## Hardware y pinout actual
 
-- Validación física de `vehiclesense_wifi` contra HiveMQ Cloud.
-- Validación y dataset físico del INMP441; calibración SPL solo si se incorpora
-  una referencia acústica adecuada.
-- Backend FastAPI, PostgreSQL, REST/WebSocket, alertas y viajes.
-- Frontend VehicleSense con dashboard, mapa, detalle e históricos.
-- Simulador multivehículo y despliegue Docker/Nginx en Oracle Cloud.
-- Fase celular posterior; SIM800L permanece conservado.
+- ESP32 DevKit V1 / NodeMCU-32 de 30 pines.
+- DHT11 en GPIO27.
+- GPS NEO-6M por UART2, GPIO32/33.
+- GY-801 y BH1750 por I2C, GPIO21/22.
+- microSD por SPI: GPIO18/19/23 y CS GPIO5.
+- INMP441 por I2S: BCLK GPIO26, WS GPIO25 y SD GPIO34.
+- SIM800L conservado por UART1 GPIO16/17, con fuente independiente; no forma
+  parte de la ruta WiFi activa.
+
+El GY-801 usa controladores independientes para ADXL345, L3G4200D, HMC5883L y
+BMP180. Las calibraciones existentes del ADXL345 y BMP180/NVS se conservan. El
+detalle eléctrico y los riesgos están en [docs/wiring.md](docs/wiring.md).
+
+## Firmware
+
+`src/main.cpp` delega en `AppController`; sensores, validación, serialización,
+almacenamiento, web y transporte permanecen separados. El environment principal
+actual es `vehiclesense_wifi`:
+
+- AP+STA y monitor local sin dependencias externas;
+- NTP con fallback de tiempo GPS;
+- MQTT 3.1.1/TLS 8883, hostname validado, QoS 1, LWT y tópicos por identidad;
+- JSONL de auditoría y spool microSD acotado hasta PUBACK;
+- DHT11, GPS, GY-801, BH1750 e INMP441;
+- resumen acústico dBFS relativo, clasificador heurístico conservador y modo de
+  recolección de características sin audio crudo;
+- OTA local protegida, con primera carga y recuperación por USB.
+
+Configuración inicial:
+
+```bash
+cp include/secrets_example.h include/secrets.h
+pio run -e test_i2c_scanner -t upload
+pio device monitor -b 115200
+pio run -e vehiclesense_wifi
+```
+
+`include/secrets.h` está ignorado por Git. No coloque credenciales reales en
+`config.h`, `platformio.ini` o documentación. Consulte
+[docs/architecture.md](docs/architecture.md),
+[docs/local_web_ota.md](docs/local_web_ota.md) y
+[docs/acoustic_monitoring.md](docs/acoustic_monitoring.md).
+
+## HiveMQ Cloud y contratos
+
+El prefijo es `vehiclesense/v1` y cada rama incluye `vehicle_id/device_id`.
+Telemetría usa schema v3; status, acústica, eventos, comandos y acuses tienen
+contratos propios. El firmware no se conecta hasta disponer de una hora UTC
+confiable para validar certificados.
+
+La configuración exacta de cluster, credenciales y ACL está en
+[docs/hivemq_cloud.md](docs/hivemq_cloud.md). Los tópicos y payloads viven en
+[contracts/mqtt-topics.md](contracts/mqtt-topics.md) y
+[docs/telemetry_payload.md](docs/telemetry_payload.md).
+
+## Backend y frontend
+
+Desarrollo local del backend:
+
+```bash
+cd backend
+cp .env.example .env
+uv sync --extra dev
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
+```
+
+Desarrollo del frontend:
+
+```bash
+cd frontend
+cp .env.example .env
+npm ci
+npm run dev
+```
+
+El navegador obtiene histórico mediante REST y cambios mediante un WebSocket
+FastAPI autenticado. Nunca recibe credenciales HiveMQ o PostgreSQL. API, roles,
+modelo de datos y eventos se documentan en [backend/README.md](backend/README.md);
+las pantallas, estados y demo explícita en [frontend/README.md](frontend/README.md).
+
+## Desarrollo sin hardware
+
+El frontend incluye un demo visual explícito. Para probar la cadena completa,
+el simulador publica datos válidos por HiveMQ y los marca con `simulated=true`:
+
+```bash
+cd simulator
+uv sync --extra dev
+uv run vehiclesense-simulator \
+  --dry-run --cycles 5 --vehicles 3 --scenario mixed
+```
+
+La guía de credenciales, escenarios, duplicados y pruebas negativas está en
+[simulator/README.md](simulator/README.md).
+
+## Producción
+
+`deploy/compose.production.yml` ejecuta PostgreSQL, FastAPI, frontend estático y
+Nginx. Solo Nginx publica 80/443. La guía de
+[despliegue Oracle Cloud](deploy/README.md) cubre Docker en ARM64/amd64, DNS,
+Certbot, health checks, registro de dispositivos, backups, restauración,
+actualización y rollback.
+
+## Validación
+
+Firmware nativo:
+
+```bash
+pio test -e test_payload_json
+pio test -e test_barometer_math
+pio test -e test_local_web_json
+pio test -e test_mqtt_topics
+pio test -e test_offline_queue
+pio test -e test_acoustic_classifier
+```
+
+Software cloud:
+
+```bash
+(cd backend && uv run ruff check . && uv run pytest -q)
+(cd frontend && npm run lint && npm test -- --run && npm run build)
+(cd simulator && uv run ruff check . && uv run pytest -q)
+docker compose --env-file deploy/.env.example \
+  -f deploy/compose.production.yml config --quiet
+```
+
+El procedimiento físico environment por environment y los criterios PASS/FAIL
+están en [docs/tests.md](docs/tests.md).
+
+## Estado y límites honestos
+
+Implementado:
+
+- firmware modular, monitor local, OTA, microSD y replay offline;
+- telemetría VehicleSense v3 y MQTT seguro HiveMQ;
+- INMP441, características acústicas y recolección etiquetada;
+- backend FastAPI/PostgreSQL, alertas, viajes, roles, REST y WebSocket;
+- frontend responsive basado en las dos referencias visuales;
+- simulador multivehículo y despliegue OCI contenerizado.
+
+Requiere acciones externas antes de declarar producción:
+
+- probar físicamente INMP441 y recopilar un dataset real balanceado;
+- crear credenciales/ACL HiveMQ y probar ESP32 ↔ broker ↔ backend;
+- ejecutar migraciones y pruebas sobre PostgreSQL real;
+- construir y levantar los contenedores con un daemon Docker disponible;
+- aprovisionar VM, dominio, DNS, certificados y copias externas;
+- realizar una prueba integral prolongada y de pérdida de conectividad.
+
+Los niveles acústicos son dBFS relativos, no dB SPL. El clasificador es una
+heurística experimental, no un detector validado. Los viajes se infieren por
+GPS y no afirman estado de encendido. OTA local aún no firma criptográficamente
+el firmware. Consulte [docs/security.md](docs/security.md) para el modelo de
+confianza y las limitaciones restantes.

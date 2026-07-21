@@ -76,9 +76,11 @@ y espera una hora confiable antes del handshake de certificados. Las
 reconexiones usan backoff configurable entre 5 y 30 segundos. El spool limita
 el replay y conserva muestras no confirmadas sin detener el `loop()`.
 
-## Extensiones futuras
+## Extensiones
 
 Un nuevo sensor solo necesita producir datos y ser agregado a la instantánea.
 Otros módems pueden entregar un `Client` a `MQTTClientCustom` sin cambiar el
-builder. El roadmap conserva fusión IMU, TLS con hardware moderno y backend
-cloud con historial.
+builder. Backend, base, frontend y simulador viven fuera del firmware y
+comparten únicamente contratos versionados. El roadmap conserva fusión IMU,
+un módem celular moderno, firma OTA y un clasificador acústico entrenado con
+evidencia real.

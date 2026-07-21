@@ -21,6 +21,19 @@ pio test -e test_offline_queue
 pio test -e test_acoustic_classifier
 ```
 
+Pruebas de software cloud sin hardware:
+
+```bash
+(cd backend && uv sync --extra dev && uv run ruff check . \
+  && uv run ruff format --check . && uv run pytest -q)
+(cd frontend && npm ci && npm run lint && npm run format:check \
+  && npm test -- --run && npm run build)
+(cd simulator && uv sync --extra dev && uv run ruff check . \
+  && uv run ruff format --check . && uv run pytest -q)
+docker compose --env-file deploy/.env.example \
+  -f deploy/compose.production.yml config --quiet
+```
+
 ## Orden obligatorio
 
 1. `full_prototype` y `full_prototype_cellular`: comprobar compilación base.
@@ -47,6 +60,37 @@ pio test -e test_acoustic_classifier
     mensajes acústicos y reconexión.
 19. Ejecutar las pruebas nativas y después `vehiclesense_wifi` durante al
     menos 60 minutos con fallos parciales inducidos.
+
+## Prueba integral HiveMQ → cloud
+
+Esta etapa requiere credenciales reales y PostgreSQL/Docker disponibles:
+
+1. Aplicar `alembic upgrade head` sobre PostgreSQL vacío y comprobar
+   `upgrade → downgrade → upgrade` antes de usar datos reales.
+2. Crear en HiveMQ credenciales separadas para backend, ESP32 y simulador con
+   las ACL de `hivemq_cloud.md`.
+3. Registrar `vehicle_id/device_id` mediante la API con auto-registro apagado.
+4. Arrancar backend y comprobar `/health/live=200` y `/health/ready=200`.
+5. Publicar tres vehículos desde `simulator --scenario mixed`; verificar mapa,
+   estados, GPS inválido, acústica, alertas, paradas, viajes y marca Demo.
+6. Activar duplicados: el número de filas no debe aumentar para el mismo
+   `sample_id`. Activar inyección inválida: debe ir a cuarentena sin aparecer en
+   telemetría.
+7. Detener/reiniciar backend y PostgreSQL por separado; MQTT debe reconectar y
+   una reentrega QoS 1 no debe duplicar datos.
+8. Iniciar `vehiclesense_wifi`; confirmar que la UI nunca sustituye un sensor
+   inválido por cero y que la página local sigue disponible sin Internet.
+9. Cortar Internet, reiniciar ESP32 con muestras pendientes y restaurar red:
+   JSONL continúa, el spool sobrevive y el backend recibe `replayed=true`.
+10. Comprobar roles: viewer no modifica, operator gestiona alertas/comandos y
+    admin crea usuarios/vehículos/dispositivos.
+11. Abrir dashboard y detalle a escritorio y móvil; no debe haber overflow,
+    errores de consola ni credenciales MQTT en los assets.
+12. Ejecutar backup, verificar checksum y ensayar restauración en una base de
+    prueba antes de aceptar producción.
+
+La prueba física y la cloud son complementarias: datos sintéticos validan el
+flujo, no el cableado, la precisión de sensores o el clasificador acústico.
 
 ## BH1750 y bus I2C
 
@@ -269,3 +313,27 @@ comparando con la presión normalizada de una aplicación meteorológica.
 - JSON: todos los tests Unity deben finalizar en `PASSED`.
 - Integración: durante 60 minutos no debe haber bloqueos, watchdog resets ni
   publicación de NaN; sin red las muestras deben seguir llegando a microSD.
+
+## Última validación automatizada
+
+Ejecutada el 20 de julio de 2026, sin hardware ni credenciales cloud:
+
+| Bloque | Resultado |
+|---|---:|
+| Builds ESP32 | 24/24 environments |
+| Unity nativo | 34/34 casos |
+| Contratos JSON | 9 válidos aceptados, 7 inválidos rechazados |
+| Backend | 15/15 pruebas, Ruff y formato limpios |
+| Migraciones | SQLite upgrade/downgrade/upgrade y DDL PostgreSQL offline |
+| Frontend | 6/6 pruebas, ESLint, Prettier y build Vite |
+| Simulador | 10/10 pruebas, Ruff, formato y smoke de 3 vehículos |
+| Despliegue | Compose válido y scripts aceptados por `bash -n` |
+
+`vehiclesense_wifi` utilizó 77 464 B de RAM (23,6 %) y 1 005 069 B de flash
+del slot OTA (51,1 %). Los builds muestran advertencias conocidas en las
+librerías TinyGPSPlus, L3G y Adafruit HMC5883L; no hubo errores del código del
+proyecto.
+
+No se pudo construir/levantar Docker porque el daemon local no estaba activo.
+Tampoco se ejecutaron las pruebas físicas, HiveMQ real, PostgreSQL real o OCI;
+son las puertas manuales descritas arriba y no deben presentarse como aprobadas.

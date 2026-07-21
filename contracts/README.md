@@ -44,11 +44,11 @@ su campo auxiliar `_contract`.
 
 ## Compatibilidad con telemetría v2
 
-El firmware actual sigue publicando schema v2 hasta la fase de integración
-WiFi. El backend tendrá un adaptador v2 explícito. El adaptador:
+`vehiclesense_wifi` publica v3. Los perfiles heredados conservan v2 y el
+backend implementa un adaptador explícito. El adaptador:
 
 1. conserva `device_id`, valores y banderas existentes;
-2. obtiene `vehicle_id` desde la asignación registrada del dispositivo;
+2. obtiene `vehicle_id` desde el tópico y verifica la asignación registrada;
 3. usa el instante de recepción como dato separado, nunca como supuesto
    instante de medición;
 4. no fabrica `sample_id`, GPS, estado acústico ni valores ausentes;

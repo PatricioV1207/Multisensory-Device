@@ -1,5 +1,8 @@
 # SIM800L, GPRS y MQTT
 
+Estado: fase experimental conservada y diferida. La ruta VehicleSense actual
+usa WiFi + HiveMQ Cloud; no dependa de SIM800L para la aceptación de esta fase.
+
 SIM800L usa UART1: TX del módem hacia GPIO16 y RX del módem desde GPIO17. Debe
 tener fuente independiente capaz de entregar picos de al menos 2 A, condensador
 de 470–1000 µF, antena y tierra común con ESP32.

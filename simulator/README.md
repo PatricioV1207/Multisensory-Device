@@ -44,16 +44,22 @@ Para inspeccionar los JSON completos use `--print-payloads`.
 ## HiveMQ Cloud
 
 Complete `.env` localmente. Nunca confirme ese archivo en Git. El usuario MQTT
-del simulador debe tener solamente estos permisos:
+del simulador debe recibir permisos exactos por identidad. Por ejemplo, para el
+dispositivo 001:
 
 ```text
-PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-+/devices/sim-device-+/telemetry
-PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-+/devices/sim-device-+/status
-PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-+/devices/sim-device-+/events
-PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-+/devices/sim-device-+/acoustic
-PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-+/devices/sim-device-+/command-acks
-SUBSCRIBE vehiclesense/v1/vehicles/sim-vehicle-+/devices/sim-device-+/commands
+PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/telemetry
+PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/status
+PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/events
+PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/acoustic
+PUBLISH   vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/command-acks
+SUBSCRIBE vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/commands
 ```
+
+Repita la matriz para `002`, `003`, etc. MQTT no admite un comodín dentro de
+un nivel (`sim-vehicle-+` no significa “prefijo”). Para pruebas rápidas con
+`+/+`, use un cluster no productivo aislado; no conceda ese acceso al simulador
+en el mismo namespace de vehículos reales.
 
 El broker debe usar TLS en el puerto 8883. Si no se indica un CA local, Python
 usa el almacén de certificados del sistema. Ejecución real:

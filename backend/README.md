@@ -74,13 +74,17 @@ Rutas principales:
 POST /api/v1/auth/login
 POST /api/v1/auth/refresh
 GET  /api/v1/auth/me
+POST /api/v1/auth/users
 GET  /api/v1/dashboard
 GET  /api/v1/vehicles
+POST /api/v1/vehicles
+PATCH /api/v1/vehicles/{vehicle_id}
 GET  /api/v1/vehicles/{vehicle_id}
 GET  /api/v1/vehicles/{vehicle_id}/telemetry
 GET  /api/v1/vehicles/{vehicle_id}/route
 GET  /api/v1/vehicles/{vehicle_id}/acoustic
 GET  /api/v1/devices
+POST /api/v1/devices
 GET  /api/v1/alerts
 PATCH /api/v1/alerts/{alert_id}
 GET  /api/v1/trips
@@ -95,8 +99,15 @@ Las consultas son accesibles a los tres roles. Crear vehículos, dispositivos y
 usuarios requiere `admin`; reconocer/resolver alertas y emitir comandos admite
 `admin` u `operator`.
 
-El WebSocket se abre en `/ws/v1/live?token={access_token}`. El servidor envía
-`connection.ready`; el cliente puede limitar actualizaciones con:
+El WebSocket se abre en `/ws/v1/live` sin credenciales en la URL. En los
+primeros cinco segundos el cliente debe enviar:
+
+```json
+{"action":"authenticate","token":"ACCESS_TOKEN"}
+```
+
+Después el servidor envía `connection.ready`; el cliente puede limitar
+actualizaciones con:
 
 ```json
 {"action":"subscribe","vehicle_ids":["vehicle-001"]}
@@ -105,6 +116,11 @@ El WebSocket se abre en `/ws/v1/live?token={access_token}`. El servidor envía
 Los eventos en vivo incluyen `telemetry.received`, `acoustic.received`,
 `device.status`, `alert.changed` y `command.acknowledged`. Al reconectar, el
 frontend debe refrescar por REST porque WebSocket no es un historial.
+
+`telemetry.received` incluye identidad, `sample_id`, hora de recepción, payload
+validado, viaje activo y alertas cambiadas. Las notificaciones de estado o
+alerta son señales para volver a consultar REST; el frontend no debe tratarlas
+como una copia completa y permanente del registro.
 
 ## Ingesta y entrega MQTT
 
@@ -157,7 +173,7 @@ también debe verificarse con `upgrade → downgrade → upgrade` antes de despl
   encendido ni usa OBD.
 - El backend conserva clasificación acústica relativa; no transforma dBFS en
   dB SPL ni afirma precisión real sin dataset etiquetado.
-- La primera migración fue validada en SQLite para tests. La validación final
-  contra PostgreSQL requiere un servidor o daemon Docker disponible.
-- El frontend, simulador y contenedores de producción se construyen en fases
-  separadas del repositorio.
+- La migración inicial se valida en SQLite y genera DDL PostgreSQL offline. La
+  aceptación final todavía requiere ejecutarla contra PostgreSQL real.
+- La topología de producción está en `../deploy`; su build necesita un daemon
+  Docker y credenciales externas para la prueba end-to-end.
