@@ -20,3 +20,4 @@ deploy/certbot/conf/
 deploy/certbot/www/
 *.dump
 *.dump.sha256
+Informes_VehicleSense/

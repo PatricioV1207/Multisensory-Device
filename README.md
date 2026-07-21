@@ -361,16 +361,6 @@ python3 contracts/validate_fixtures.py
 | [Arquitectura cloud](docs/cloud_architecture.md) | Backend, base de datos, frontend y despliegue |
 | [Seguridad](docs/security.md) | Modelo de confianza y riesgos pendientes |
 
-<details>
-<summary><strong>Informes académicos del proyecto</strong></summary>
-
-1. [Investigación y propuesta técnica inicial](Informes_VehicleSense/Informe_1_Investigacion_Propuesta.pdf)
-2. [Calibración y pruebas de módulos](Informes_VehicleSense/Informe_2_Calibracion_Pruebas.pdf)
-3. [Comunicación, almacenamiento y plataforma web](Informes_VehicleSense/Informe_3_Comunicacion_Plataforma.pdf)
-4. [Diseño de la caja electrónica, esquemático y PCB](Informes_VehicleSense/Informe_4_Caja_PCB_VehicleSense.pdf)
-
-</details>
-
 ## Estado actual
 
 | Área | Estado | Observación |
