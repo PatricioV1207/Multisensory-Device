@@ -109,12 +109,22 @@ Las pruebas cubren:
 - navegación responsive;
 - formato de valores y magnitud vectorial.
 
-Además se validaron manualmente dashboard, detalle, menú móvil y flujo de
-alertas a 1680×945, 1440×900 y 390×844. En esos tamaños no existe overflow
-horizontal ni errores de consola.
+El procedimiento visual debe revisar dashboard, detalle, menú móvil y flujo de
+alertas a 1680×945, 1440×900 y 390×844. El repositorio no conserva una evidencia
+fechada que permita tratar esa revisión manual como vigente.
 
 ## Límites
 
+- Settings es informativo: no edita usuarios, asignaciones ni umbrales.
+- La UI no aplica ACL por vehículo ni adapta todas las acciones al rol; FastAPI es
+  la frontera obligatoria de autorización.
+- Reportes genera CSV/JSON en el navegador con las últimas 24 horas consultadas; no
+  existe exportación histórica de servidor.
+- La suite automatizada se concentra en el adaptador demo y no demuestra REST/WS
+  contra un backend desplegado.
+- `TripsPage`, `DevicesPage` y `VehicleDetailPage` etiquetan como “Producción” los
+  registros con `simulated=false`. Ese valor solo significa no simulado; la UI debe
+  usar “Real/no simulado” y reservar “Producción” para una procedencia verificable.
 - La cartografía usa tiles públicos de OpenStreetMap; una instalación de gran
   escala debe revisar su política de uso o contratar un proveedor de tiles.
 - Las gráficas consultan ventanas acotadas por la API y no hacen agregación

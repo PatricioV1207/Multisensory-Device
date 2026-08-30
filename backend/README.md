@@ -99,6 +99,10 @@ Las consultas son accesibles a los tres roles. Crear vehículos, dispositivos y
 usuarios requiere `admin`; reconocer/resolver alertas y emitir comandos admite
 `admin` u `operator`.
 
+La autorización es global por rol: todavía no existe asignación de usuarios a
+vehículos ni filtrado por vehículo. El refresh JWT es autocontenido y no existe una
+tabla de sesiones, revocación o endpoint de logout.
+
 El WebSocket se abre en `/ws/v1/live` sin credenciales en la URL. En los
 primeros cinco segundos el cliente debe enviar:
 
@@ -171,9 +175,18 @@ también debe verificarse con `upgrade → downgrade → upgrade` antes de despl
 
 - La detección de viajes infiere movimiento por GPS; no afirma estado de
   encendido ni usa OBD.
+- El firmware registra los comandos publicados, pero responde siempre
+  `unsupported`/`COMMAND_HANDLER_DEFERRED`; no existe control físico remoto.
+- No hay ACL por vehículo, persistencia/revocación de refresh sessions, logout ni
+  endpoint para consultar `device_status_history`.
+- Las alertas actuales provienen de lógica fija y umbrales por vehículo; no existe
+  una tabla genérica de reglas configurables.
+- El callback MQTT no está desacoplado mediante una cola interna acotada y no hay
+  limpieza automática de retención.
 - El backend conserva clasificación acústica relativa; no transforma dBFS en
   dB SPL ni afirma precisión real sin dataset etiquetado.
 - La migración inicial se valida en SQLite y genera DDL PostgreSQL offline. La
-  aceptación final todavía requiere ejecutarla contra PostgreSQL real.
+  aceptación final todavía requiere ejecutarla contra PostgreSQL real. Tampoco hay
+  evidencia de ingesta con un broker real.
 - La topología de producción está en `../deploy`; su build necesita un daemon
   Docker y credenciales externas para la prueba end-to-end.

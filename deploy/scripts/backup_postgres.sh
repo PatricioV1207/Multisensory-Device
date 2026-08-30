@@ -17,6 +17,13 @@ set -a
 source "$ENV_FILE"
 set +a
 
+compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+"${compose[@]}" config --quiet
+if [[ "$("${compose[@]}" ps --status running -q postgres | wc -l | tr -d ' ')" != "1" ]]; then
+  echo "PostgreSQL is not running; no backup was created." >&2
+  exit 1
+fi
+
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 umask 077
@@ -27,7 +34,7 @@ temporary="$BACKUP_DIR/.${filename}.tmp"
 final="$BACKUP_DIR/$filename"
 trap 'rm -f "$temporary"' EXIT
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T postgres \
+"${compose[@]}" exec -T postgres \
   pg_dump \
     --username "$POSTGRES_USER" \
     --dbname "$POSTGRES_DB" \
@@ -44,4 +51,4 @@ mv "$temporary" "$final"
 trap - EXIT
 
 echo "Backup created: $final"
-echo "Copy the .dump and .sha256 files to storage outside this VM."
+echo "Copy the .dump and .sha256 files to encrypted storage outside EC2."

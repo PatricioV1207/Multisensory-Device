@@ -14,13 +14,14 @@
   <img src="https://img.shields.io/badge/FastAPI-Backend-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/React-Frontend-149ECA?style=flat-square&logo=react&logoColor=white" alt="React">
   <img src="https://img.shields.io/badge/PostgreSQL-History-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/AWS-EC2_reference-FF9900?style=flat-square&logo=amazonwebservices&logoColor=white" alt="AWS EC2 como referencia de despliegue">
   <img src="https://img.shields.io/badge/Language-Español-123B5D?style=flat-square" alt="Documentación en español">
 </p>
 
 <p align="center">
   <strong>Adquisición multisensorial, validación en el borde, respaldo offline y supervisión web de vehículos.</strong>
   <br>
-  Firmware modular para ESP32 y una plataforma cloud completa, unidos por contratos MQTT versionados.
+  Firmware modular para ESP32 y una plataforma cloud en desarrollo, unidos por contratos MQTT versionados.
 </p>
 
 <p align="center">
@@ -35,16 +36,20 @@
 > [!IMPORTANT]
 > VehicleSense es un prototipo académico de instrumentación. La ruta integrada recomendada usa **WiFi + MQTT/TLS**. El SIM800L permanece como transporte experimental y no se utiliza como sustituto de sistemas vehiculares certificados.
 
+El estado verificable y el siguiente bloque de trabajo viven en
+[`STATUS.md`](STATUS.md) y [`ROADMAP.md`](ROADMAP.md). La fuente de verdad es, en
+orden, código/configuración/migraciones/contratos, pruebas y documentación.
+
 ## Visión general
 
 VehicleSense convierte mediciones heterogéneas en telemetría útil y trazable. El nodo embarcado combina temperatura, humedad, iluminación, movimiento, presión, GPS y características acústicas; valida cada fuente, guarda una copia local y publica mensajes MQTT hacia una plataforma de supervisión.
 
 <table>
   <tr>
-    <td width="25%"><strong>Edge confiable</strong><br><sub>Lecturas tipadas, banderas de validez y ejecución no bloqueante.</sub></td>
-    <td width="25%"><strong>Continuidad offline</strong><br><sub>JSONL y cola microSD acotada hasta recibir PUBACK.</sub></td>
-    <td width="25%"><strong>Transporte seguro</strong><br><sub>MQTT 3.1.1 sobre TLS, QoS 1, LWT e identidad por dispositivo.</sub></td>
-    <td width="25%"><strong>Supervisión completa</strong><br><sub>Dashboard local, OTA, backend histórico y aplicación web responsive.</sub></td>
+    <td width="25%"><strong>Edge validable</strong><br><sub>Lecturas tipadas, banderas de validez y ejecución no bloqueante.</sub></td>
+    <td width="25%"><strong>Telemetría offline</strong><br><sub>JSONL y spool microSD de telemetría hasta recibir PUBACK.</sub></td>
+    <td width="25%"><strong>Transporte TLS</strong><br><sub>MQTT 3.1.1, QoS 1, LWT e identidad por dispositivo.</sub></td>
+    <td width="25%"><strong>Supervisión funcional</strong><br><sub>Dashboard local, OTA, backend histórico y aplicación web responsive.</sub></td>
   </tr>
 </table>
 
@@ -53,7 +58,9 @@ VehicleSense convierte mediciones heterogéneas en telemetría útil y trazable.
 - **No inventar datos:** una lectura inválida se omite; nunca se reemplaza por cero, `NaN` o una fecha falsa.
 - **Tolerar fallos parciales:** un sensor, la microSD o la red pueden fallar sin detener el ciclo principal.
 - **Separar responsabilidades:** sensores, telemetría, almacenamiento, comunicación y presentación viven en módulos independientes.
-- **Mantener trazabilidad:** cada mensaje conserva identidad, versión de contrato, secuencia, origen real/simulado y condición de replay.
+- **Mantener trazabilidad:** telemetría y acústica conservan identificadores y
+  banderas según sus contratos; estado, eventos, comandos y acuses usan sus propios
+  metadatos contractuales.
 - **Proteger secretos:** credenciales WiFi, MQTT, AP y administración quedan fuera del control de versiones.
 
 ## Interfaz y prototipo
@@ -76,7 +83,7 @@ VehicleSense convierte mediciones heterogéneas en telemetría útil y trazable.
     </td>
     <td width="50%" align="center">
       <img src="docs/assets/readme/pcb-3d.png" alt="Vista tridimensional de la PCB de VehicleSense" width="100%"><br>
-      <sub><strong>Prototipo físico:</strong> PCB para organizar alimentación y conexiones.</sub>
+      <sub><strong>Concepto PCB:</strong> referencia visual; Rev A sigue en borrador y no debe fabricarse.</sub>
     </td>
   </tr>
 </table>
@@ -92,12 +99,12 @@ flowchart LR
         SENS["DHT11 · GPS · GY-801<br/>BH1750 · INMP441"] --> APP["AppController"]
         APP --> VALID["Validación + snapshot"]
         VALID --> JSON["Telemetry v3"]
-        JSON --> SD["microSD<br/>JSONL + cola offline"]
+        JSON --> SD["microSD<br/>JSONL + spool de telemetría"]
         APP --> LOCAL["Web local + OTA"]
     end
 
     JSON -->|"MQTT/TLS · QoS 1"| BROKER["HiveMQ Cloud"]
-    SD -.->|"replay tras reconexión"| BROKER
+    SD -.->|"replay solo de telemetría"| BROKER
     BROKER --> API["FastAPI<br/>validación e ingesta"]
     API --> DB[("PostgreSQL")]
     API --> LIVE["REST + WebSocket"]
@@ -106,7 +113,11 @@ flowchart LR
     BROKER -->|"command acknowledgements"| API
 ```
 
-La arquitectura separa el dispositivo, el transporte y la aplicación. El navegador nunca recibe credenciales MQTT ni se conecta directamente al broker; consume datos confiables a través del backend.
+La arquitectura separa el dispositivo, el transporte y la aplicación. El navegador
+no recibe credenciales MQTT ni se conecta directamente al broker; consume datos
+validados por el backend. AWS EC2 es la guía de despliegue de referencia, no una
+instancia productiva demostrada; HiveMQ Cloud permanece externo. La arquitectura
+completa y sus brechas están en [`docs/architecture.md`](docs/architecture.md).
 
 ### Componentes del repositorio
 
@@ -343,14 +354,19 @@ Validación de los componentes cloud:
 (cd backend && uv run ruff check . && uv run pytest -q)
 (cd frontend && npm run lint && npm test -- --run && npm run build)
 (cd simulator && uv run ruff check . && uv run pytest -q)
-python3 contracts/validate_fixtures.py
+(cd backend && uv run python ../contracts/validate_fixtures.py)
 ```
+
+El último comando usa el entorno Python del backend, que incluye `jsonschema`.
+`npm run build` del frontend ya ejecuta `tsc -b`; no existe un script `typecheck`.
 
 ## Documentación
 
 | Documento | Contenido |
 |---|---|
-| [Arquitectura del firmware](docs/architecture.md) | Capas, flujo, temporización y extensiones |
+| [Estado actual](STATUS.md) | Hechos implementados, parciales, ausentes y evidencia |
+| [Roadmap](ROADMAP.md) | Cinco bloques mayores; cada uno se planifica en un chat nuevo |
+| [Arquitectura completa](docs/architecture.md) | Flujos, componentes, persistencia, confianza y brechas |
 | [Cableado](docs/wiring.md) | Pinout, niveles eléctricos y mapa I2C |
 | [Payload de telemetría](docs/telemetry_payload.md) | Campos, unidades, validez y versiones |
 | [Pruebas](docs/tests.md) | Procedimientos por environment y criterios de aceptación |
@@ -358,28 +374,18 @@ python3 contracts/validate_fixtures.py
 | [Web local y OTA](docs/local_web_ota.md) | Endpoints, autenticación y actualización |
 | [Almacenamiento](docs/storage.md) | JSONL, cola offline, rotación y replay |
 | [Monitoreo acústico](docs/acoustic_monitoring.md) | I2S, dBFS, características y límites |
-| [Arquitectura cloud](docs/cloud_architecture.md) | Backend, base de datos, frontend y despliegue |
 | [Seguridad](docs/security.md) | Modelo de confianza y riesgos pendientes |
+| [Especificación PCB Rev A](docs/especificacion_pcb_vehiclesense.md) | Borrador técnico; bloqueada antes de fabricar |
+| [Despliegue AWS EC2](deploy/aws/README.md) | Instancia, DNS, HTTPS, operación y rollback |
 
 ## Estado actual
 
-| Área | Estado | Observación |
-|---|---|---|
-| Firmware modular ESP32 | ✅ Implementado | Sensores, validación, web local, OTA y microSD |
-| Ruta WiFi + MQTT/TLS | ✅ Implementada | Requiere credenciales y ACL propias para la prueba externa |
-| Contratos y backend | ✅ Implementados | La aceptación final necesita PostgreSQL y broker aprovisionados |
-| Frontend responsive | ✅ Implementado | Incluye modo demo explícito y datos sintéticos identificados |
-| SIM800L/GPRS | 🧪 Experimental | Cobertura 2G, alimentación y TLS dependen del entorno y firmware |
-| Monitoreo acústico | 🧪 Experimental | Valores relativos dBFS; todavía no equivalen a dB SPL calibrados |
-| Despliegue productivo | 📋 Documentado | Requiere VM, dominio, DNS, certificados y prueba integral |
-
-### Próximos pasos
-
-- [ ] Completar una prueba física prolongada ESP32 → HiveMQ → backend → frontend.
-- [ ] Recopilar y validar un dataset acústico real balanceado.
-- [ ] Evaluar un módem LTE con soporte TLS más sólido.
-- [ ] Firmar criptográficamente las actualizaciones OTA y añadir rollback verificado.
-- [ ] Validar la solución dentro del gabinete final y bajo condiciones reales de vehículo.
+El repositorio implementa los componentes principales, pero el sistema sigue
+**parcial y sin validación física o productiva registrada**. En particular, los
+comandos del firmware siempre responden `unsupported`, solo telemetría tiene replay
+durable, el clasificador acústico y SIM800L son experimentales, y AWS EC2 es una guía
+no aprovisionada. Consulte [`STATUS.md`](STATUS.md) para el corte detallado y
+[`ROADMAP.md`](ROADMAP.md) para las etapas pendientes.
 
 ## Seguridad y uso responsable
 

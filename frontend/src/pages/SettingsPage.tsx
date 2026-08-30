@@ -81,8 +81,8 @@ export function SettingsPage() {
       <Panel title="Seguridad">
         <ul className="plain-list">
           <li>
-            HiveMQ solo es accesible desde dispositivos y backend mediante ACL
-            específicas.
+            El despliegue de HiveMQ debe restringir dispositivos y backend
+            mediante ACL específicas, verificadas en cada entorno.
           </li>
           <li>PostgreSQL no se expone al navegador.</li>
           <li>

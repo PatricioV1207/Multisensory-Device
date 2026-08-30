@@ -30,13 +30,23 @@ Pruebas de software cloud sin hardware:
   && npm test -- --run && npm run build)
 (cd simulator && uv sync --extra dev && uv run ruff check . \
   && uv run ruff format --check . && uv run pytest -q)
+(cd backend && uv run python ../contracts/validate_fixtures.py)
 docker compose --env-file deploy/.env.example \
   -f deploy/compose.production.yml config --quiet
 ```
 
-## Orden obligatorio
+La validación de contratos usa el entorno del backend porque incluye `jsonschema`.
+El frontend no define un script `typecheck`; `npm run build` ejecuta `tsc -b` antes
+de Vite.
 
-1. `full_prototype` y `full_prototype_cellular`: comprobar compilación base.
+## Orden de validación de hardware
+
+El orden es obligatorio para las pruebas que apliquen al hardware montado. El
+perfil y las pruebas SIM800L solo se incluyen cuando se monta o se evalúa la
+ruta celular experimental; no son requisito para aceptar la ruta WiFi.
+
+1. `full_prototype`: comprobar compilación base; añadir
+   `full_prototype_cellular` solo al evaluar la ruta celular.
 2. Serial Monitor: verificar banner sin reinicios.
 3. `test_dht11`: lectura y desconexión. 
 4. `test_gps`: caracteres NMEA y fix al aire libre.
@@ -48,10 +58,12 @@ docker compose --env-file deploy/.env.example \
 10. `test_microsd`: montaje, JSONL, extracción y reinserción.
 11. `test_wifi`: IP, RSSI y reconexión.
 12. `test_mqtt_wifi`: observar el mensaje en el broker.
-13. Con fuente externa adecuada para el SIM800L: `test_sim800l_at`, después
-    `test_sim800l_gprs` y confirmar APN/IP/TCP.
-14. `test_sim800l_mqtt`: publicar solo el payload sintético por TCP/1883.
-15. `test_sim800l_mqtt_tls`: comprobar TLS/SNI con el broker real.
+13. Si se evalúa SIM800L, usar una fuente externa adecuada y ejecutar
+    `test_sim800l_at`, después `test_sim800l_gprs`, confirmando APN/IP/TCP.
+14. En esa misma evaluación celular, `test_sim800l_mqtt`: publicar solo el
+    payload sintético por TCP/1883.
+15. En esa misma evaluación celular, `test_sim800l_mqtt_tls`: comprobar TLS/SNI
+    con el broker real.
 16. `test_local_web`: revisar dashboard y APIs; `test_local_ota`: autenticación
     y actualización con un binario válido.
 17. `test_inmp441`: comprobar señal I2S, nivel relativo, clipping y respuesta
@@ -99,6 +111,11 @@ sin ocultar las direcciones del GY-801. En `test_bh1750`, acerca y retira una
 fuente de luz, cubre el sensor y desconéctalo temporalmente. Debe cambiar
 `light_lux`, marcar `valid=0` al fallar y recuperarse sin reiniciar.
 
+Una observación histórica sin fecha ni log registró las cuatro direcciones del
+GY-801 junto con `[W][Wire.cpp:301] begin(): Bus already started in Master Mode`.
+Al repetir el scanner, documenta si el warning reaparece y si corresponde a una
+segunda inicialización real del bus. Esa nota histórica no cuenta como PASS.
+
 ## microSD
 
 Con `test_microsd`, comprueba que se cree `/telemetry` y que cada línea del
@@ -128,8 +145,10 @@ temporalmente `OFFLINE_QUEUE_MAX_RECORDS`. Al excederlo debe aumentar
 
 ## SIM800L, GPRS y MQTT
 
-No conectes el módem hasta confirmar una fuente capaz de soportar picos de al
-menos 2 A, condensador cercano y GND común. La secuencia es obligatoria:
+Esta sección solo aplica cuando se monta o se evalúa la ruta celular
+experimental. No conectes el módem hasta confirmar una fuente capaz de soportar
+picos de al menos 2 A, condensador cercano y GND común. Dentro de esa evaluación,
+ejecuta la secuencia completa en este orden:
 
 1. `test_sim800l_at`: debe detectar módem, SIM y CSQ.
 2. `test_sim800l_gprs`: debe registrar red 2G, operador, APN e IP, y mostrar
@@ -216,9 +235,10 @@ acelerómetro en m/s²:
 - `magnitude_raw_mps2`
 - `magnitude_cal_mps2`
 
-Los valores actuales de calibración provienen de una calibración física de 6
-posiciones usando las orientaciones `+X`, `-X`, `+Y`, `-Y`, `+Z` y `-Z`.
-Corrigen offset y escala por eje mediante:
+Los valores configurados se describieron como resultado de una calibración de 6
+posiciones usando `+X`, `-X`, `+Y`, `-Y`, `+Z` y `-Z`, pero el repositorio no
+conserva el registro crudo fechado. Deben repetirse antes de aceptar hardware. La
+corrección de offset y escala usa:
 
 ```text
 accel_cal = (accel_raw - offset) * scale
@@ -314,26 +334,30 @@ comparando con la presión normalizada de una aplicación meteorológica.
 - Integración: durante 60 minutos no debe haber bloqueos, watchdog resets ni
   publicación de NaN; sin red las muestras deben seguir llegando a microSD.
 
-## Última validación automatizada
+## Línea base verificable del 30 de agosto de 2026
 
-Ejecutada el 20 de julio de 2026, sin hardware ni credenciales cloud:
+La matriz automatizada se ejecutó en el entorno local con estos resultados:
 
-| Bloque | Resultado |
-|---|---:|
-| Builds ESP32 | 24/24 environments |
-| Unity nativo | 34/34 casos |
-| Contratos JSON | 9 válidos aceptados, 7 inválidos rechazados |
-| Backend | 15/15 pruebas, Ruff y formato limpios |
-| Migraciones | SQLite upgrade/downgrade/upgrade y DDL PostgreSQL offline |
-| Frontend | 6/6 pruebas, ESLint, Prettier y build Vite |
-| Simulador | 10/10 pruebas, Ruff, formato y smoke de 3 vehículos |
-| Despliegue | Compose válido y scripts aceptados por `bash -n` |
+| Bloque | Evidencia 2026-08-30 |
+|---|---|
+| Builds ESP32 | 24/24 environments compilados |
+| Unity nativo | 34/34 casos aprobados |
+| Contratos JSON | 9 fixtures válidos aceptados y 7 inválidos rechazados |
+| Backend | Ruff y formato limpios; pytest 15/15, con una `StarletteDeprecationWarning` de dependencia |
+| Migraciones | Alembic SQLite `upgrade head → downgrade base → upgrade head` aprobado; `alembic upgrade head --sql` generó 330 líneas de SQL PostgreSQL offline |
+| Frontend | ESLint y Prettier limpios; Vitest 6/6; `npm run build` completó `tsc -b` y Vite |
+| Simulador | Ruff y formato limpios; pytest 10/10 |
+| Despliegue estático | `docker compose --env-file deploy/.env.example -f deploy/compose.production.yml config --quiet` aprobado |
+| Archivos operativos | `bash -n` de scripts y validación de sintaxis JSON aprobados |
 
-`vehiclesense_wifi` utilizó 77 464 B de RAM (23,6 %) y 1 005 069 B de flash
-del slot OTA (51,1 %). Los builds muestran advertencias conocidas en las
-librerías TinyGPSPlus, L3G y Adafruit HMC5883L; no hubo errores del código del
-proyecto.
+La primera ejecución desde el Python global,
+`python3 contracts/validate_fixtures.py`, falló porque ese intérprete no tenía
+instalado `jsonschema`. La repetición con
+`backend/.venv/bin/python contracts/validate_fixtures.py` aprobó los 9 fixtures
+válidos y rechazó los 7 inválidos. Es un requisito del entorno de validación, no un
+fallo contractual.
 
-No se pudo construir/levantar Docker porque el daemon local no estaba activo.
-Tampoco se ejecutaron las pruebas físicas, HiveMQ real, PostgreSQL real o OCI;
-son las puertas manuales descritas arriba y no deben presentarse como aprobadas.
+Esta línea base es exclusivamente automatizada/local. La generación SQL offline no
+abrió una conexión PostgreSQL. Tampoco demuestra placa o sensores físicos, HiveMQ u
+otro broker real, ejecución de contenedores Docker, E2E cloud ni AWS aprovisionada.
+Consulte [`../STATUS.md`](../STATUS.md) para el corte vigente.

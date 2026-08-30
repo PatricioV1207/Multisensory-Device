@@ -14,6 +14,8 @@ queda normalmente en `http://192.168.4.1/`.
 
 La página muestra estado y coordenadas GPS como texto para diagnóstico local.
 No incluye mapa, ruta ni recursos cartográficos externos.
+La separación es intencional: `/api/telemetry/basic` incluye los campos GPS
+textuales cuando el fix es válido; `/api/status` no contiene GPS.
 
 El AP requiere WPA2. `/admin` y `/admin/update` añaden HTTP Basic con un usuario
 y contraseña distintos. Si faltan credenciales, el AP o OTA se deshabilitan

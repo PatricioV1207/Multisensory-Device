@@ -42,8 +42,17 @@ else
 fi
 
 compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+"${compose[@]}" config --quiet
+backend_stopped=false
+restart_backend() {
+  if [[ "$backend_stopped" == "true" ]]; then
+    "${compose[@]}" up -d backend
+  fi
+}
+trap restart_backend EXIT
+
 "${compose[@]}" stop backend
-trap '"${compose[@]}" up -d backend' EXIT
+backend_stopped=true
 
 "${compose[@]}" exec -T postgres pg_restore \
   --username "$POSTGRES_USER" \
@@ -54,5 +63,6 @@ trap '"${compose[@]}" up -d backend' EXIT
   --no-acl <"$BACKUP_FILE"
 
 "${compose[@]}" up -d backend
+backend_stopped=false
 trap - EXIT
 echo "Restore completed and backend restarted."

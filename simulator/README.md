@@ -70,7 +70,8 @@ uv run vehiclesense-simulator --vehicles 3 --scenario mixed
 
 Cada comando recibido se valida contra `command-v1.schema.json`, se comprueba
 contra la identidad del dispositivo y se responde en `command-acks`. Un comando
-vencido obtiene estado `expired`.
+vencido obtiene estado `expired`. El acuse es comportamiento simulado: no ejecuta
+una acción semántica ni demuestra el handler del ESP32.
 
 ## Escenarios y pruebas negativas
 
@@ -102,4 +103,5 @@ uv run pytest -q
 Las pruebas cubren contratos, omisión de campos dependientes cuando GPS o
 micrófono son inválidos, estados offline/online, comandos, ejecución CLI y el
 límite/replay de la cola. La conexión real a HiveMQ requiere credenciales y se
-valida como prueba manual separada.
+valida como prueba manual separada. La cola vive solo en memoria y no sobrevive al
+reinicio del proceso.
