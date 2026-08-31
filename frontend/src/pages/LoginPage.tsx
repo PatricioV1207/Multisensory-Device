@@ -55,8 +55,7 @@ export function LoginPage() {
         <div className="login-brand">
           <span>
             <Truck size={25} />
-          </span>{" "}
-          Vehicle<strong>Sense</strong>
+          </span>
         </div>
         <div className="login-visual__content">
           <span className="login-kicker">
@@ -82,7 +81,7 @@ export function LoginPage() {
             <Truck size={24} />
           </div>
           <h2>Bienvenido</h2>
-          <p>Accede al centro de monitoreo VehicleSense.</p>
+          <p>Accede al centro de monitoreo vehicular.</p>
           {error && (
             <div className="form-error" role="alert">
               {error}

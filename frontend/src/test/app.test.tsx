@@ -5,7 +5,7 @@ import { resetDemoState } from "../lib/api";
 import { clearTokens } from "../lib/session";
 import { authenticateDemo, renderApp } from "./render";
 
-describe("VehicleSense application", () => {
+describe("vehicle monitoring application", () => {
   beforeEach(() => {
     clearTokens();
     resetDemoState();

@@ -1,9 +1,9 @@
-# Especificación de la PCB del nodo VehicleSense
+# Especificación de la PCB del nodo embarcado
 
 **Estado:** borrador técnico para diseño y revisión eléctrica
 **Fecha:** 2026-08-02
 **Proyecto:** `Proyecto_Monitoreo_Automovil`
-**Objetivo:** definir todo lo necesario para diseñar, fabricar, ensamblar y validar una PCB portadora de los módulos que utiliza el firmware VehicleSense.
+**Objetivo:** definir todo lo necesario para diseñar, fabricar, ensamblar y validar una PCB portadora de los módulos que utiliza el firmware del nodo embarcado.
 
 > Este documento describe una **PCB portadora de módulos**. El repositorio no contiene todavía un esquemático, una PCB de KiCad, footprints verificados, archivos Gerber ni dibujos mecánicos de los breakouts. Por lo tanto, este documento fija el comportamiento eléctrico y el netlist que el firmware necesita, pero no autoriza fabricar hasta cerrar las verificaciones de la sección [Bloqueos antes de fabricar](#14-bloqueos-antes-de-fabricar).
 

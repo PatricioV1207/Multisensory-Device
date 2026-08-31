@@ -2,7 +2,7 @@ import { AlertCircle, Inbox, LoaderCircle, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function PageLoader({
-  label = "Cargando VehicleSense…",
+  label = "Cargando…",
 }: {
   label?: string;
 }) {

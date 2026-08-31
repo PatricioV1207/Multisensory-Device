@@ -1,6 +1,6 @@
 # SIM800L, GPRS y MQTT
 
-Estado: fase experimental conservada y diferida. La ruta VehicleSense actual
+Estado: fase experimental conservada y diferida. La ruta integrada actual
 usa WiFi + HiveMQ Cloud; no dependa de SIM800L para la aceptación de esta fase.
 
 SIM800L usa UART1: TX del módem hacia GPIO16 y RX del módem desde GPIO17. Debe

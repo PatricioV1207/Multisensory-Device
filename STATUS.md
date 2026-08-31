@@ -1,6 +1,6 @@
-# Estado actual de VehicleSense
+# Estado actual del proyecto
 
-Fecha de corte: **2026-08-30**. Este estado describe lo observable en el repositorio;
+Fecha de corte: **2026-08-31**. Este estado describe lo observable en el repositorio;
 no acredita hardware ni infraestructura externa.
 
 ## Línea base y evidencia
@@ -28,6 +28,13 @@ no acredita hardware ni infraestructura externa.
 - El repositorio no contiene evidencia fechada de placa física, HiveMQ real,
   broker real, PostgreSQL real, Docker runtime/E2E, EC2 aprovisionada ni operación
   productiva.
+- La interfaz y la documentación pública no usan un nombre de producto. Los
+  identificadores técnicos heredados de perfiles, tópicos, paquetes y variables se
+  conservan únicamente para no romper contratos ni despliegues existentes.
+- El retiro de la denominación pública se validó el 2026-08-31 con búsqueda textual
+  sin coincidencias del nombre, build del perfil integrado, lint/pruebas/build del
+  frontend, Ruff/pytest del backend y simulador, fixtures contractuales y sintaxis
+  de los scripts de despliegue modificados.
 
 ### Observaciones históricas no reproducibles
 

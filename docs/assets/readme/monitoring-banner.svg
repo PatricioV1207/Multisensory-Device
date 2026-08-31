@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title description">
-  <title id="title">VehicleSense</title>
+  <title id="title">Monitoreo vehicular IoT</title>
   <desc id="description">Plataforma IoT multisensorial para monitoreo de vehículos</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
@@ -35,8 +35,8 @@
     <path d="M27 35h18" stroke="#06243b" stroke-width="4" stroke-linecap="round"/>
   </g>
 
-  <text x="70" y="190" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="700" letter-spacing="-2">Vehicle<tspan fill="#3dd7c2">Sense</tspan></text>
-  <text x="72" y="234" fill="#cde5ef" font-family="Arial, Helvetica, sans-serif" font-size="24">Plataforma IoT multisensorial para monitoreo de vehículos</text>
+  <text x="72" y="190" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Plataforma IoT multisensorial</text>
+  <text x="72" y="234" fill="#cde5ef" font-family="Arial, Helvetica, sans-serif" font-size="24">Monitoreo de vehículos</text>
   <text x="72" y="274" fill="#8fb8ca" font-family="Arial, Helvetica, sans-serif" font-size="17">Firmware de borde · MQTT/TLS · almacenamiento offline · web local y cloud</text>
 
   <g transform="translate(70 315)" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">

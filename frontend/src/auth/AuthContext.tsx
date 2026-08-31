@@ -57,7 +57,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const enterDemo = useCallback(async () => {
     if (!isDemoMode) return;
-    await login("demo@vehiclesense.local", "demonstration");
+    await login("demo@monitor.local", "demonstration");
   }, [login]);
 
   const value = useMemo(

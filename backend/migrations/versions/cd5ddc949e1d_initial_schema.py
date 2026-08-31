@@ -1,4 +1,4 @@
-"""initial VehicleSense schema
+"""initial vehicle monitoring schema
 
 Revision ID: cd5ddc949e1d
 Revises:

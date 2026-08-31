@@ -7,11 +7,11 @@ namespace WebAssets {
 static const char DASHBOARD_HTML[] PROGMEM = R"HTML(
 <!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VehicleSense Local</title><style>
+<title>Monitor local</title><style>
 :root{--bg:#f5f9ff;--panel:#fff;--line:#dce7f4;--text:#10213d;--muted:#65758e;--blue:#0878f9;--cyan:#0aa8b5;--ok:#10a85b;--warn:#ed9700;--bad:#df3d45;--soft:#edf6ff}
 *{box-sizing:border-box}body{margin:0;font:15px system-ui,-apple-system,sans-serif;background:radial-gradient(circle at 80% 0,#e7f7ff 0,transparent 35%),var(--bg);color:var(--text);min-height:100vh}
 header{background:#fff;border-bottom:1px solid var(--line);padding:18px max(18px,4vw);display:flex;justify-content:space-between;gap:18px;align-items:center;position:sticky;top:0;z-index:2}
-.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#fff;display:grid;place-items:center;font-weight:800}.brand b{font-size:21px}.brand b span{color:var(--cyan)}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#fff;display:grid;place-items:center;font-weight:800}
 .identity{font-size:12px;color:var(--muted);margin-top:3px}.admin{padding:10px 14px;border:1px solid var(--line);border-radius:10px;color:var(--text);text-decoration:none;background:#fff;font-weight:650}
 main{max-width:1400px;margin:auto;padding:26px max(18px,4vw) 40px}.intro{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:18px}.intro h1{margin:0;font-size:clamp(23px,4vw,34px)}.intro p{margin:5px 0 0;color:var(--muted)}
 .live{border-radius:999px;padding:7px 11px;background:#e9f9f0;color:var(--ok);font-size:12px;font-weight:750}.live.off{background:#fff1f1;color:var(--bad)}.live.warn{background:#fff7e5;color:var(--warn)}
@@ -19,8 +19,8 @@ main{max-width:1400px;margin:auto;padding:26px max(18px,4vw) 40px}.intro{display
 .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.065em;font-weight:700}.value{font-size:24px;font-weight:780;margin-top:9px;overflow-wrap:anywhere}.detail{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.blue{color:var(--blue)}
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{background:var(--soft);color:#36516f;border-radius:999px;padding:6px 9px;font-size:12px}.notice{border-left:4px solid var(--warn);background:#fff9e9;padding:12px 14px;border-radius:10px;color:#735319}
 footer{padding:0 max(18px,4vw) 28px;text-align:center;color:var(--muted);font-size:12px}
-@media(max-width:980px){.card{grid-column:span 6}}@media(max-width:620px){header{position:static}.brand b{font-size:18px}.admin{padding:8px 10px}.intro{align-items:flex-start;flex-direction:column}.card,.wide{grid-column:1/-1}.value{font-size:21px}}
-</style></head><body><header><div class="brand"><div class="logo">VS</div><div><b>Vehicle<span>Sense</span></b><div id="identity" class="identity">Conectando con el dispositivo…</div></div></div><a class="admin" href="/admin">Administrar</a></header>
+@media(max-width:980px){.card{grid-column:span 6}}@media(max-width:620px){header{position:static}.admin{padding:8px 10px}.intro{align-items:flex-start;flex-direction:column}.card,.wide{grid-column:1/-1}.value{font-size:21px}}
+</style></head><body><header><div class="brand"><div class="logo">VS</div><div id="identity" class="identity">Conectando con el dispositivo…</div></div><a class="admin" href="/admin">Administrar</a></header>
 <main><div class="intro"><div><h1>Monitor local</h1><p>Diagnóstico directo del vehículo, disponible sin Internet.</p></div><div id="live" class="live off">Sin respuesta</div></div>
 <div class="grid">
 <section class="card"><div class="label">Temperatura</div><div id="temp" class="value">—</div><div id="dhtState" class="detail">Sin lectura</div></section>
@@ -54,7 +54,7 @@ refresh();setInterval(refresh,2000);
 </script></body></html>)HTML";
 
 static const char ADMIN_HTML[] PROGMEM = R"HTML(
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administración VehicleSense</title><style>
-body{font:16px system-ui,sans-serif;max-width:680px;margin:50px auto;padding:20px;background:#f4f9ff;color:#10213d}section{background:#fff;padding:28px;border-radius:16px;border:1px solid #dce7f4;box-shadow:0 12px 35px #315c8715}input,button{width:100%;margin-top:14px;padding:12px}button{background:#0878f9;color:white;border:0;border-radius:9px;font-weight:700}small{color:#65758e}a{color:#0878f9}</style></head><body><section><h1>Actualización OTA local</h1><p>Selecciona el <code>firmware.bin</code> compilado para el mismo environment instalado en el dispositivo. Para VehicleSense usa <code>vehiclesense_wifi</code>.</p><form method="POST" action="/admin/update" enctype="multipart/form-data"><input type="file" name="firmware" accept=".bin,application/octet-stream" required><button type="submit">Actualizar firmware</button></form><p><small>No desconectes la alimentación durante el proceso. USB permanece como vía de recuperación.</small></p><a href="/">Volver al monitor</a></section></body></html>)HTML";
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administración local</title><style>
+body{font:16px system-ui,sans-serif;max-width:680px;margin:50px auto;padding:20px;background:#f4f9ff;color:#10213d}section{background:#fff;padding:28px;border-radius:16px;border:1px solid #dce7f4;box-shadow:0 12px 35px #315c8715}input,button{width:100%;margin-top:14px;padding:12px}button{background:#0878f9;color:white;border:0;border-radius:9px;font-weight:700}small{color:#65758e}a{color:#0878f9}</style></head><body><section><h1>Actualización OTA local</h1><p>Selecciona el <code>firmware.bin</code> compilado para el mismo environment instalado en el dispositivo. Para el perfil integrado usa <code>vehiclesense_wifi</code>.</p><form method="POST" action="/admin/update" enctype="multipart/form-data"><input type="file" name="firmware" accept=".bin,application/octet-stream" required><button type="submit">Actualizar firmware</button></form><p><small>No desconectes la alimentación durante el proceso. USB permanece como vía de recuperación.</small></p><a href="/">Volver al monitor</a></section></body></html>)HTML";
 
 }  // namespace WebAssets

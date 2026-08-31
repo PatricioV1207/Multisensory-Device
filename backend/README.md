@@ -1,4 +1,4 @@
-# VehicleSense backend
+# Backend de monitoreo vehicular
 
 Servicio de confianza entre HiveMQ Cloud, PostgreSQL y la aplicación web. El
 navegador nunca se conecta al broker ni recibe credenciales MQTT.

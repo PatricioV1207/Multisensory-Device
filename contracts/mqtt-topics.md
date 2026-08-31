@@ -1,4 +1,4 @@
-# Tópicos MQTT de VehicleSense
+# Tópicos MQTT del sistema
 
 Prefijo de protocolo: `vehiclesense/v1`.
 

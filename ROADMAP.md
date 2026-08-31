@@ -1,6 +1,6 @@
-# Roadmap de VehicleSense
+# Roadmap del proyecto
 
-Estado al 2026-08-30. Este archivo enumera solo etapas mayores; **cada bloque debe
+Estado al 2026-08-31. Este archivo enumera solo etapas mayores; **cada bloque debe
 recibir su propio plan en un chat nuevo**, después de releer `STATUS.md`, arquitectura
 y código.
 

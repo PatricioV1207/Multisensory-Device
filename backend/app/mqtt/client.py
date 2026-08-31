@@ -112,7 +112,7 @@ class HiveMQService:
             self.last_error = f"subscribe failed: {result}"
             logger.error("HiveMQ subscription failed rc=%d", result)
         else:
-            logger.info("HiveMQ connected and subscribed to scoped VehicleSense topics")
+            logger.info("HiveMQ connected and subscribed to scoped vehicle topics")
 
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties) -> None:
         del client, userdata, disconnect_flags, properties

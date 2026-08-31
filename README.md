@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/readme/vehiclesense-banner.svg" alt="VehicleSense — plataforma IoT multisensorial para monitoreo de vehículos" width="100%">
+  <img src="docs/assets/readme/monitoring-banner.svg" alt="Plataforma IoT multisensorial para monitoreo de vehículos" width="100%">
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@
 </p>
 
 > [!IMPORTANT]
-> VehicleSense es un prototipo académico de instrumentación. La ruta integrada recomendada usa **WiFi + MQTT/TLS**. El SIM800L permanece como transporte experimental y no se utiliza como sustituto de sistemas vehiculares certificados.
+> Este proyecto es un prototipo académico de instrumentación. La ruta integrada recomendada usa **WiFi + MQTT/TLS**. El SIM800L permanece como transporte experimental y no se utiliza como sustituto de sistemas vehiculares certificados.
 
 El estado verificable y el siguiente bloque de trabajo viven en
 [`STATUS.md`](STATUS.md) y [`ROADMAP.md`](ROADMAP.md). La fuente de verdad es, en
@@ -42,7 +42,7 @@ orden, código/configuración/migraciones/contratos, pruebas y documentación.
 
 ## Visión general
 
-VehicleSense convierte mediciones heterogéneas en telemetría útil y trazable. El nodo embarcado combina temperatura, humedad, iluminación, movimiento, presión, GPS y características acústicas; valida cada fuente, guarda una copia local y publica mensajes MQTT hacia una plataforma de supervisión.
+El sistema convierte mediciones heterogéneas en telemetría útil y trazable. El nodo embarcado combina temperatura, humedad, iluminación, movimiento, presión, GPS y características acústicas; valida cada fuente, guarda una copia local y publica mensajes MQTT hacia una plataforma de supervisión.
 
 <table>
   <tr>
@@ -68,11 +68,11 @@ VehicleSense convierte mediciones heterogéneas en telemetría útil y trazable.
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/assets/readme/cloud-dashboard.jpg" alt="Dashboard cloud de VehicleSense" width="100%"><br>
+      <img src="docs/assets/readme/cloud-dashboard.jpg" alt="Dashboard cloud de monitoreo vehicular" width="100%"><br>
       <sub><strong>Dashboard cloud:</strong> flota, mapa, alertas, viajes y analítica.</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/assets/readme/vehicle-detail.jpg" alt="Detalle de vehículo en VehicleSense" width="100%"><br>
+      <img src="docs/assets/readme/vehicle-detail.jpg" alt="Detalle de vehículo en la plataforma de monitoreo" width="100%"><br>
       <sub><strong>Detalle del vehículo:</strong> ruta, telemetría, conectividad e histórico.</sub>
     </td>
   </tr>
@@ -82,7 +82,7 @@ VehicleSense convierte mediciones heterogéneas en telemetría útil y trazable.
       <sub><strong>Monitor local:</strong> diagnóstico básico aun cuando no existe Internet.</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/assets/readme/pcb-3d.png" alt="Vista tridimensional de la PCB de VehicleSense" width="100%"><br>
+      <img src="docs/assets/readme/pcb-3d.png" alt="Vista tridimensional de la PCB del nodo embarcado" width="100%"><br>
       <sub><strong>Concepto PCB:</strong> referencia visual; Rev A sigue en borrador y no debe fabricarse.</sub>
     </td>
   </tr>
@@ -108,7 +108,7 @@ flowchart LR
     BROKER --> API["FastAPI<br/>validación e ingesta"]
     API --> DB[("PostgreSQL")]
     API --> LIVE["REST + WebSocket"]
-    LIVE --> WEB["React VehicleSense"]
+    LIVE --> WEB["Aplicación React"]
     API -->|"comandos"| BROKER
     BROKER -->|"command acknowledgements"| API
 ```
@@ -375,7 +375,7 @@ El último comando usa el entorno Python del backend, que incluye `jsonschema`.
 | [Almacenamiento](docs/storage.md) | JSONL, cola offline, rotación y replay |
 | [Monitoreo acústico](docs/acoustic_monitoring.md) | I2S, dBFS, características y límites |
 | [Seguridad](docs/security.md) | Modelo de confianza y riesgos pendientes |
-| [Especificación PCB Rev A](docs/especificacion_pcb_vehiclesense.md) | Borrador técnico; bloqueada antes de fabricar |
+| [Especificación PCB Rev A](docs/especificacion_pcb.md) | Borrador técnico; bloqueada antes de fabricar |
 | [Despliegue AWS EC2](deploy/aws/README.md) | Instancia, DNS, HTTPS, operación y rollback |
 
 ## Estado actual
@@ -401,5 +401,5 @@ Revise el modelo completo en [`docs/security.md`](docs/security.md) antes de exp
 
 <p align="center">
   Desarrollado por <a href="https://github.com/PatricioV1207"><strong>Patricio Vásquez</strong></a><br>
-  <sub>VehicleSense · monitoreo vehicular IoT modular y extensible</sub>
+  <sub>Monitoreo vehicular IoT modular y extensible</sub>
 </p>

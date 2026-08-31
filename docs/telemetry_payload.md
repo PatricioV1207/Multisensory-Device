@@ -2,7 +2,7 @@
 
 ## Política temporal e identidad
 
-`uptime_ms` es tiempo desde el arranque, no Unix epoch. El perfil VehicleSense
+`uptime_ms` es tiempo desde el arranque, no Unix epoch. El perfil integrado
 usa `schema_version=3`, `vehicle_id`, `device_id`, `boot_id`, `sequence`,
 `sample_id` e identidad persistente. Cuando NTP o GPS proporcionan UTC
 confiable incluye `measured_at` y `time_valid=true`; si no, omite la fecha en

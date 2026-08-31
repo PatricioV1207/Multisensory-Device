@@ -1,6 +1,6 @@
-# Arquitectura actual de VehicleSense
+# Arquitectura actual del sistema
 
-Estado al 2026-08-30. Esta es la vista completa del sistema implementado y sus
+Estado al 2026-08-31. Esta es la vista completa del sistema implementado y sus
 límites; [`../STATUS.md`](../STATUS.md) mantiene el corte operativo y
 [`../ROADMAP.md`](../ROADMAP.md) el trabajo futuro.
 
@@ -164,7 +164,7 @@ JWT no revocables, OTA sin firma, secretos administrados manualmente, falta de M
 retención y observabilidad incompletas y una sola VM.
 
 GPS es dato sensible. No se almacena audio crudo; dBFS no equivale a dB SPL y
-`heuristic-1` carece de dataset de validación. VehicleSense no es un sistema de
+`heuristic-1` carece de dataset de validación. Este proyecto no es un sistema de
 seguridad vehicular certificado.
 
 ## Brechas explícitas

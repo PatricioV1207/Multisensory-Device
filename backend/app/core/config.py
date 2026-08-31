@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "VehicleSense API"
+    app_name: str = "API de monitoreo vehicular"
     environment: Literal["development", "test", "production"] = "development"
     api_prefix: str = "/api/v1"
     database_url: str = "postgresql+asyncpg://vehiclesense:vehiclesense@localhost/vehiclesense"

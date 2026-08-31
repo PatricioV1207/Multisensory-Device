@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "vehiclesense-backend"
 version = "0.1.0"
-description = "Trusted MQTT, PostgreSQL, REST and WebSocket layer for VehicleSense"
+description = "Trusted MQTT, PostgreSQL, REST and WebSocket layer for vehicle monitoring"
 requires-python = ">=3.12,<3.14"
 dependencies = [
   "alembic>=1.14,<2",

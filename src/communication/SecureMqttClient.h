@@ -7,7 +7,7 @@
 #include "communication/MqttTopics.h"
 #include "config.h"
 
-class VehicleSenseMqttClient {
+class SecureMqttClient {
  public:
   bool begin(uint32_t bootId);
   void update(uint32_t nowMs, bool networkReady);

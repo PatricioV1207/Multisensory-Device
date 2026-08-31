@@ -1,4 +1,4 @@
-# VehicleSense contracts
+# Contratos compartidos
 
 Este directorio es la fuente de verdad para los mensajes intercambiados entre
 firmware, HiveMQ Cloud, backend y simulador.

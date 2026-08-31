@@ -1,4 +1,4 @@
-# Simulador VehicleSense
+# Simulador de telemetría vehicular
 
 Genera vehículos reproducibles sin un ESP32 físico y publica exactamente los
 contratos JSON Schema de producción. Todos los mensajes incluyen

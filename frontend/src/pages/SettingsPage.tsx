@@ -50,7 +50,7 @@ export function SettingsPage() {
                 <Radio size={17} /> Modo
               </dt>
               <dd>
-                {isDemoMode ? "Demostración simulada" : "Backend VehicleSense"}
+                {isDemoMode ? "Demostración simulada" : "Backend conectado"}
               </dd>
             </div>
             <div>

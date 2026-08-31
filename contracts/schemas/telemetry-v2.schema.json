@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vehiclesense.local/schemas/telemetry-v2.schema.json",
   "title": "Legacy ESP32 telemetry v2",
-  "description": "Exact flat contract emitted by the firmware before VehicleSense schema v3.",
+  "description": "Exact flat contract emitted by the firmware before schema v3.",
   "type": "object",
   "additionalProperties": false,
   "required": [

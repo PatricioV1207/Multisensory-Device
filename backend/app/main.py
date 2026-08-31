@@ -107,7 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         task = asyncio.create_task(maintenance_loop(app), name="vehiclesense-maintenance")
         app.state.maintenance_task = task
         logger.info(
-            "VehicleSense backend started environment=%s database=%s",
+            "Vehicle monitoring backend started environment=%s database=%s",
             configured.environment,
             redact_connection_url(configured.database_url),
         )

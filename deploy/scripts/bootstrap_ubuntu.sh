@@ -14,7 +14,7 @@ fi
 # shellcheck disable=SC1091
 source /etc/os-release
 if [[ "${ID:-}" != "ubuntu" || "${VERSION_ID:-}" != "24.04" ]]; then
-  echo "VehicleSense production expects Ubuntu 24.04; found ${PRETTY_NAME:-unknown}." >&2
+  echo "Production expects Ubuntu 24.04; found ${PRETTY_NAME:-unknown}." >&2
   exit 1
 fi
 

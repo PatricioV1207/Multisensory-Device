@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate all VehicleSense contract fixtures.
+"""Validate all contract fixtures.
 
 This is a development-time helper. It deliberately keeps `_contract` outside
 the payload passed to JSON Schema so fixture routing metadata never appears on

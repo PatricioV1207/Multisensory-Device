@@ -66,7 +66,7 @@ if [[ -n "$admin_email" || -n "$admin_password" ]]; then
 fi
 
 if [[ "$DOMAIN" != "vehiclemonitorsense.me" || "$WWW_DOMAIN" != "www.vehiclemonitorsense.me" ]]; then
-  echo "Warning: configured domains differ from the VehicleSense production domains." >&2
+  echo "Warning: configured domains differ from the expected production domains." >&2
 fi
 
 if [[ -z "${VEHICLESENSE_IMAGE_TAG:-}" || "$VEHICLESENSE_IMAGE_TAG" == "latest" ]]; then
@@ -83,5 +83,5 @@ compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 "${compose[@]}" up -d --remove-orphans --wait --wait-timeout 240
 "${compose[@]}" ps
 
-echo "VehicleSense is running with image tag $VEHICLESENSE_IMAGE_TAG."
+echo "The platform is running with image tag $VEHICLESENSE_IMAGE_TAG."
 echo "Check: https://$DOMAIN/health/live"

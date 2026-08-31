@@ -69,9 +69,6 @@ export function AppShell() {
           <span className="brand__mark">
             <Truck size={23} />
           </span>
-          <span>
-            Vehicle<strong>Sense</strong>
-          </span>
           <button
             type="button"
             className="icon-button sidebar__close"

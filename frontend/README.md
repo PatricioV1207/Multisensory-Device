@@ -1,4 +1,4 @@
-# VehicleSense frontend
+# Frontend de monitoreo vehicular
 
 Aplicación React responsive para supervisión de flota, telemetría, GPS,
 acústica, alertas y viajes. Sigue el lenguaje visual de las referencias del

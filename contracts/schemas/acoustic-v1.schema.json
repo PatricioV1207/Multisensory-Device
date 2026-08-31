@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vehiclesense.local/schemas/acoustic-v1.schema.json",
-  "title": "VehicleSense acoustic aggregate v1",
+  "title": "Vehicle acoustic aggregate v1",
   "type": "object",
   "additionalProperties": false,
   "required": [

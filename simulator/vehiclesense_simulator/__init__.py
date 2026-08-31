@@ -1,3 +1,3 @@
-"""VehicleSense simulation package."""
+"""Vehicle telemetry simulation package."""
 
 __version__ = "0.1.0"

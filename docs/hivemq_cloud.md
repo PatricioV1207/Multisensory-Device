@@ -1,6 +1,6 @@
 # Configuración de HiveMQ Cloud
 
-VehicleSense usa HiveMQ Cloud únicamente como transporte MQTT en tiempo real.
+El sistema usa HiveMQ Cloud únicamente como transporte MQTT en tiempo real.
 PostgreSQL conserva el histórico y el backend es la frontera de confianza. El
 frontend nunca se conecta al cluster.
 

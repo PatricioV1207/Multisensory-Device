@@ -1,1 +1,1 @@
-"""VehicleSense trusted cloud backend."""
+"""Trusted cloud backend for vehicle monitoring."""

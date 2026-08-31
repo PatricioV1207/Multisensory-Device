@@ -7,7 +7,7 @@
 #include "acoustic/AcousticMessageBuilder.h"
 #include "communication/MQTTClientCustom.h"
 #include "communication/SIM800LModem.h"
-#include "communication/VehicleSenseMqttClient.h"
+#include "communication/SecureMqttClient.h"
 #include "communication/WiFiManagerCustom.h"
 #include "diagnostics/ModuleTestRunner.h"
 #include "sensors/DHT11Sensor.h"
@@ -32,7 +32,7 @@ class AppController {
   void publishTelemetry(uint32_t nowMs);
   void refreshLocalWebData(uint32_t nowMs);
   void beginSharedSensors();
-  void processVehicleSenseMqtt(uint32_t nowMs);
+  void processSecureMqtt(uint32_t nowMs);
   void processAcoustic(uint32_t nowMs);
   void acknowledgeUnsupportedCommand(const char* commandId, uint32_t nowMs);
 
@@ -49,7 +49,7 @@ class AppController {
 #if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   INMP441Microphone _microphone;
   OfflineTelemetryQueue _offlineQueue;
-  VehicleSenseMqttClient _secureMqtt;
+  SecureMqttClient _secureMqtt;
   AcousticAlertEvaluator _acousticAlerts;
   DeviceIdentity _identity;
   TimeService _time;

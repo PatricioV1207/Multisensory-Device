@@ -1,1 +1,1 @@
-"""VehicleSense backend test suite."""
+"""Vehicle monitoring backend test suite."""

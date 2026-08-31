@@ -1,4 +1,4 @@
-# Despliegue de referencia de VehicleSense
+# Despliegue de referencia
 
 El proveedor documental de referencia es **AWS EC2** sobre Ubuntu 24.04. No hay
 evidencia en el repositorio de una instancia aprovisionada o validada. La

@@ -1,6 +1,6 @@
 # Almacenamiento y entrega offline
 
-VehicleSense separa deliberadamente dos usos de la microSD:
+El sistema separa deliberadamente dos usos de la microSD:
 
 1. **Archivo de auditoría:** `MicroSDLogger` guarda cada payload como una línea
    JSON independiente bajo `/telemetry`. Los archivos

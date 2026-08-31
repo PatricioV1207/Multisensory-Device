@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vehiclesense.local/schemas/command-v1.schema.json",
-  "title": "VehicleSense command v1",
+  "title": "Vehicle device command v1",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -1,4 +1,4 @@
-#include "communication/VehicleSenseMqttClient.h"
+#include "communication/SecureMqttClient.h"
 
 #include <esp_crt_bundle.h>
 #include <cerrno>
@@ -19,7 +19,7 @@ bool reached(uint32_t nowMs, uint32_t deadlineMs) {
 }
 }
 
-bool VehicleSenseMqttClient::begin(uint32_t bootId) {
+bool SecureMqttClient::begin(uint32_t bootId) {
   if (!hasRealValue(HIVEMQ_HOST) || HIVEMQ_PORT == 0U ||
       !hasRealValue(HIVEMQ_USERNAME) || !hasRealValue(HIVEMQ_PASSWORD)) {
     Logger::error("CONFIG", "HiveMQ host/credentials missing in secrets.h");
@@ -27,12 +27,12 @@ bool VehicleSenseMqttClient::begin(uint32_t bootId) {
   }
   if (!_topics.build(VEHICLE_ID, DEVICE_ID) ||
       !buildIdentityAndStatus(bootId)) {
-    Logger::error("MQTT", "Invalid VehicleSense identity or topic length");
+    Logger::error("MQTT", "Invalid device identity or topic length");
     return false;
   }
 
   esp_mqtt_client_config_t mqttConfig = {};
-  mqttConfig.event_handle = &VehicleSenseMqttClient::eventHandler;
+  mqttConfig.event_handle = &SecureMqttClient::eventHandler;
   mqttConfig.host = HIVEMQ_HOST;
   mqttConfig.port = HIVEMQ_PORT;
   mqttConfig.client_id = _clientId;
@@ -67,7 +67,7 @@ bool VehicleSenseMqttClient::begin(uint32_t bootId) {
   return true;
 }
 
-bool VehicleSenseMqttClient::buildIdentityAndStatus(uint32_t bootId) {
+bool SecureMqttClient::buildIdentityAndStatus(uint32_t bootId) {
   const uint64_t chipId = ESP.getEfuseMac();
   const int clientCount =
       snprintf(_clientId, sizeof(_clientId), "vs-%s-%08lX", DEVICE_ID,
@@ -95,7 +95,7 @@ bool VehicleSenseMqttClient::buildIdentityAndStatus(uint32_t bootId) {
          static_cast<size_t>(onlineCount) < sizeof(_onlineStatus);
 }
 
-void VehicleSenseMqttClient::update(uint32_t nowMs, bool networkReady) {
+void SecureMqttClient::update(uint32_t nowMs, bool networkReady) {
   expirePendingTelemetry(nowMs);
   if (!_configured || _client == nullptr || !networkReady) {
     return;
@@ -131,16 +131,16 @@ void VehicleSenseMqttClient::update(uint32_t nowMs, bool networkReady) {
   }
 }
 
-esp_err_t VehicleSenseMqttClient::eventHandler(
+esp_err_t SecureMqttClient::eventHandler(
     esp_mqtt_event_handle_t event) {
   if (event == nullptr || event->user_context == nullptr) {
     return ESP_ERR_INVALID_ARG;
   }
-  return static_cast<VehicleSenseMqttClient*>(event->user_context)
+  return static_cast<SecureMqttClient*>(event->user_context)
       ->handleEvent(event);
 }
 
-esp_err_t VehicleSenseMqttClient::handleEvent(
+esp_err_t SecureMqttClient::handleEvent(
     esp_mqtt_event_handle_t event) {
   const uint32_t nowMs = millis();
   switch (event->event_id) {
@@ -177,7 +177,7 @@ esp_err_t VehicleSenseMqttClient::handleEvent(
   return ESP_OK;
 }
 
-void VehicleSenseMqttClient::handleConnected() {
+void SecureMqttClient::handleConnected() {
   _connected = true;
   _attemptInProgress = false;
   _backoffMs = RECONNECT_BACKOFF_MIN_MS;
@@ -193,7 +193,7 @@ void VehicleSenseMqttClient::handleConnected() {
   Logger::info("MQTT", "HiveMQ connected with TLS; command ACL requested");
 }
 
-void VehicleSenseMqttClient::handleDisconnected(uint32_t nowMs) {
+void SecureMqttClient::handleDisconnected(uint32_t nowMs) {
   const bool wasConnected = _connected;
   _connected = false;
   _attemptInProgress = false;
@@ -203,12 +203,12 @@ void VehicleSenseMqttClient::handleDisconnected(uint32_t nowMs) {
   }
 }
 
-void VehicleSenseMqttClient::scheduleReconnect(uint32_t nowMs) {
+void SecureMqttClient::scheduleReconnect(uint32_t nowMs) {
   _nextAttemptMs = nowMs + _backoffMs;
   increaseBackoff();
 }
 
-void VehicleSenseMqttClient::increaseBackoff() {
+void SecureMqttClient::increaseBackoff() {
   if (_backoffMs < RECONNECT_BACKOFF_MAX_MS) {
     _backoffMs *= 2U;
     if (_backoffMs > RECONNECT_BACKOFF_MAX_MS) {
@@ -217,7 +217,7 @@ void VehicleSenseMqttClient::increaseBackoff() {
   }
 }
 
-bool VehicleSenseMqttClient::publishTo(const char* topic, const char* payload,
+bool SecureMqttClient::publishTo(const char* topic, const char* payload,
                                        size_t length, int qos, bool retain,
                                        int* messageId) {
   if (!_connected || topic == nullptr || payload == nullptr || length == 0U ||
@@ -236,7 +236,7 @@ bool VehicleSenseMqttClient::publishTo(const char* topic, const char* payload,
   return true;
 }
 
-bool VehicleSenseMqttClient::publishTelemetry(const char* payload,
+bool SecureMqttClient::publishTelemetry(const char* payload,
                                               size_t length,
                                               uint32_t token) {
   portENTER_CRITICAL(&_sharedMux);
@@ -258,26 +258,26 @@ bool VehicleSenseMqttClient::publishTelemetry(const char* payload,
   return true;
 }
 
-bool VehicleSenseMqttClient::publishCommandAck(const char* payload,
+bool SecureMqttClient::publishCommandAck(const char* payload,
                                                size_t length) {
   return publishTo(_topics.commandAcks(), payload, length, 1, false);
 }
 
-bool VehicleSenseMqttClient::publishAcoustic(const char* payload,
+bool SecureMqttClient::publishAcoustic(const char* payload,
                                              size_t length) {
   return publishTo(_topics.acoustic(), payload, length, 1, false);
 }
 
-bool VehicleSenseMqttClient::publishEvent(const char* payload, size_t length) {
+bool SecureMqttClient::publishEvent(const char* payload, size_t length) {
   return publishTo(_topics.events(), payload, length, 1, false);
 }
 
-bool VehicleSenseMqttClient::publishStatus() {
+bool SecureMqttClient::publishStatus() {
   return publishTo(_topics.status(), _onlineStatus, strlen(_onlineStatus), 1,
                    true);
 }
 
-void VehicleSenseMqttClient::handlePublished(int messageId, uint32_t nowMs) {
+void SecureMqttClient::handlePublished(int messageId, uint32_t nowMs) {
   portENTER_CRITICAL(&_sharedMux);
   if (messageId == _pendingTelemetryMessageId) {
     _acknowledgedToken = _pendingTelemetryToken;
@@ -290,7 +290,7 @@ void VehicleSenseMqttClient::handlePublished(int messageId, uint32_t nowMs) {
   portEXIT_CRITICAL(&_sharedMux);
 }
 
-bool VehicleSenseMqttClient::takeTelemetryAck(
+bool SecureMqttClient::takeTelemetryAck(
     uint32_t& token, uint32_t& acknowledgedAtMs) {
   bool available = false;
   portENTER_CRITICAL(&_sharedMux);
@@ -304,7 +304,7 @@ bool VehicleSenseMqttClient::takeTelemetryAck(
   return available;
 }
 
-void VehicleSenseMqttClient::handleIncomingData(
+void SecureMqttClient::handleIncomingData(
     esp_mqtt_event_handle_t event) {
   if (event->current_data_offset == 0) {
     const bool topicMatches =
@@ -341,7 +341,7 @@ void VehicleSenseMqttClient::handleIncomingData(
   }
 }
 
-bool VehicleSenseMqttClient::takeCommand(char* output, size_t outputSize,
+bool SecureMqttClient::takeCommand(char* output, size_t outputSize,
                                          size_t* written) {
   if (written != nullptr) {
     *written = 0U;
@@ -365,23 +365,23 @@ bool VehicleSenseMqttClient::takeCommand(char* output, size_t outputSize,
   return available;
 }
 
-bool VehicleSenseMqttClient::isConfigured() const {
+bool SecureMqttClient::isConfigured() const {
   return _configured;
 }
 
-bool VehicleSenseMqttClient::isStarted() const {
+bool SecureMqttClient::isStarted() const {
   return _started;
 }
 
-bool VehicleSenseMqttClient::isConnected() const {
+bool SecureMqttClient::isConnected() const {
   return _connected;
 }
 
-bool VehicleSenseMqttClient::isReconnecting() const {
+bool SecureMqttClient::isReconnecting() const {
   return _configured && _started && !_connected;
 }
 
-bool VehicleSenseMqttClient::hasPendingTelemetry() {
+bool SecureMqttClient::hasPendingTelemetry() {
   bool pending = false;
   portENTER_CRITICAL(&_sharedMux);
   pending = _pendingTelemetryMessageId >= 0;
@@ -389,7 +389,7 @@ bool VehicleSenseMqttClient::hasPendingTelemetry() {
   return pending;
 }
 
-void VehicleSenseMqttClient::expirePendingTelemetry(uint32_t nowMs) {
+void SecureMqttClient::expirePendingTelemetry(uint32_t nowMs) {
   bool expired = false;
   portENTER_CRITICAL(&_sharedMux);
   if (_pendingTelemetryMessageId >= 0 && _pendingTelemetryStartedMs != 0U &&
@@ -406,10 +406,10 @@ void VehicleSenseMqttClient::expirePendingTelemetry(uint32_t nowMs) {
   }
 }
 
-int32_t VehicleSenseMqttClient::lastError() const {
+int32_t SecureMqttClient::lastError() const {
   return _lastError;
 }
 
-const MqttTopics& VehicleSenseMqttClient::topics() const {
+const MqttTopics& SecureMqttClient::topics() const {
   return _topics;
 }

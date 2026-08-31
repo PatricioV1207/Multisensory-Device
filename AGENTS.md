@@ -1,6 +1,6 @@
 # Reglas permanentes para agentes
 
-Estas reglas aplican a cualquier chat que modifique VehicleSense. El repositorio
+Estas reglas aplican a cualquier chat que modifique este proyecto. El repositorio
 debe poder trabajarse mediante tareas pequeñas e independientes.
 
 ## Contexto mínimo antes de actuar
@@ -52,7 +52,7 @@ broker, PostgreSQL ni despliegue reales.
   fuente externa capaz de soportar sus picos y GND común.
 - OTA local no está firmada, no usa HTTPS y no tiene rollback automático. Conserve
   USB como recuperación y no exponga el AP a Internet.
-- VehicleSense es un prototipo académico: no lo presente como sistema de seguridad
+- Este proyecto es un prototipo académico: no lo presente como sistema de seguridad
   vehicular, medición acústica certificada ni diagnóstico automotriz.
 
 ## Cierre de una tarea

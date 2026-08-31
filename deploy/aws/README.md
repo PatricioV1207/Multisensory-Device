@@ -1,6 +1,6 @@
-# VehicleSense en AWS EC2
+# Despliegue en AWS EC2
 
-Esta guía despliega toda la plataforma cloud de VehicleSense en una única
+Esta guía despliega toda la plataforma cloud en una única
 instancia EC2 Ubuntu 24.04, manteniendo HiveMQ Cloud como broker MQTT externo.
 No contiene credenciales ni ejecuta operaciones sobre una cuenta AWS. Es un
 procedimiento de referencia: el repositorio no demuestra que la instancia, DNS,

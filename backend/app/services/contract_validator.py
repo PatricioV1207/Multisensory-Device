@@ -70,7 +70,7 @@ class ContractValidator:
     def validate(self, topic: str, raw_payload: bytes | str) -> ValidatedMessage:
         topic_match = self.topic_pattern.fullmatch(topic)
         if topic_match is None:
-            raise ContractValidationError("topic does not match the VehicleSense namespace")
+            raise ContractValidationError("topic does not match the configured namespace")
         encoded = raw_payload.encode("utf-8") if isinstance(raw_payload, str) else raw_payload
         if not encoded or len(encoded) > self.maximum_bytes:
             raise ContractValidationError("payload is empty or exceeds the configured limit")

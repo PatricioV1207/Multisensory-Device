@@ -27,7 +27,7 @@ TelemetryData completeSample() {
   return data;
 }
 
-TelemetryData vehicleSenseSample() {
+TelemetryData telemetrySample() {
   TelemetryData data = completeSample();
   data.vehicleId = "vehicle_01";
   data.bootId = 7;
@@ -107,7 +107,7 @@ void test_small_buffer_and_missing_device_are_rejected() {
 }
 
 void test_v3_payload_has_identity_time_and_transport_state() {
-  const TelemetryData data = vehicleSenseSample();
+  const TelemetryData data = telemetrySample();
   char output[2048];
   size_t written = 0;
   TEST_ASSERT_TRUE(
@@ -133,7 +133,7 @@ void test_v3_payload_has_identity_time_and_transport_state() {
 }
 
 void test_v3_omits_untrusted_time_and_invalid_values() {
-  TelemetryData data = vehicleSenseSample();
+  TelemetryData data = telemetrySample();
   data.timeValid = false;
   data.measuredAt = "";
   data.dht.valid = false;
@@ -152,7 +152,7 @@ void test_v3_omits_untrusted_time_and_invalid_values() {
 }
 
 void test_v3_rejects_missing_vehicle_or_persistent_identity() {
-  TelemetryData data = vehicleSenseSample();
+  TelemetryData data = telemetrySample();
   char output[2048];
   data.vehicleId = "";
   TEST_ASSERT_FALSE(TelemetryBuilder::buildV3(data, output, sizeof(output)));
@@ -162,7 +162,7 @@ void test_v3_rejects_missing_vehicle_or_persistent_identity() {
 }
 
 void test_v3_acoustic_summary_is_bounded_and_omitted_when_invalid() {
-  TelemetryData data = vehicleSenseSample();
+  TelemetryData data = telemetrySample();
   data.acoustic.microphoneValid = true;
   data.acoustic.analysisValid = true;
   data.acoustic.relativeLevelDbfs = -31.8F;

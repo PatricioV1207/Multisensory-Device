@@ -81,7 +81,7 @@ fase futura debe añadir firma criptográfica si el riesgo operativo lo exige.
 ## Datos y privacidad
 
 GPS revela ubicación e historial de movimiento. Limite acceso por rol, defina
-una política de retención y proteja backups. VehicleSense no implementa aún
+una política de retención y proteja backups. El sistema no implementa aún
 borrado programado o anonimización.
 
 El INMP441 no hace reconocimiento de voz ni identificación de hablantes. Audio

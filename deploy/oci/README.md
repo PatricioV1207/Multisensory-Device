@@ -1,6 +1,6 @@
 # Oracle Cloud Infrastructure: referencia histórica
 
-VehicleSense adoptó AWS EC2 como proveedor productivo de referencia. Esta
+El proyecto adoptó AWS EC2 como proveedor productivo de referencia. Esta
 carpeta conserva OCI como alternativa porque el despliegue Docker Compose es
 portable entre hosts Ubuntu `arm64` y `amd64`.
 

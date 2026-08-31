@@ -27,7 +27,7 @@ current_revision="$(git -C "$REPOSITORY_DIR" rev-parse HEAD)"
 target_revision="$(git -C "$REPOSITORY_DIR" rev-parse "origin/$TARGET_BRANCH")"
 
 if [[ "$current_revision" == "$target_revision" ]]; then
-  echo "VehicleSense is already at $current_revision."
+  echo "The platform is already at $current_revision."
   exit 0
 fi
 

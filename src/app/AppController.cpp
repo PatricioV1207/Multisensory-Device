@@ -130,7 +130,7 @@ void AppController::update() {
   _time.update(nowMs, _wifi.isConnected(), _gps.getData());
   _offlineQueue.update(nowMs, _time.epochSeconds(), _storage.isReady());
   _secureMqtt.update(nowMs, _wifi.isConnected() && _time.isValid());
-  processVehicleSenseMqtt(nowMs);
+  processSecureMqtt(nowMs);
   _microphone.update(nowMs);
   processAcoustic(nowMs);
   _web.update(nowMs);
@@ -255,7 +255,7 @@ void AppController::publishTelemetry(uint32_t nowMs) {
   }
 }
 
-void AppController::processVehicleSenseMqtt(uint32_t nowMs) {
+void AppController::processSecureMqtt(uint32_t nowMs) {
 #if APP_MODE == APP_MODE_VEHICLESENSE_WIFI
   _mqttStatus.configured = _secureMqtt.isConfigured();
   _mqttStatus.connected = _secureMqtt.isConnected();

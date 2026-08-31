@@ -2,7 +2,7 @@
 
 ## Alcance
 
-VehicleSense captura el INMP441 por I2S a 16 kHz y procesa la señal en el
+El firmware captura el INMP441 por I2S a 16 kHz y procesa la señal en el
 ESP32. Publica características y categorías aproximadas, pero no audio crudo.
 El objetivo de esta fase es instrumentar y recolectar evidencia para mejorar
 el modelo, no presentar el clasificador heurístico como detector certificado.

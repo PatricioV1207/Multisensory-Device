@@ -111,7 +111,7 @@ export const api = {
     if (isDemoMode) {
       return {
         id: "demo-user",
-        email: "demo@vehiclesense.local",
+        email: "demo@monitor.local",
         role: "admin",
         active: true,
       };

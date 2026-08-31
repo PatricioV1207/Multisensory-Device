@@ -21,7 +21,7 @@ El AP requiere WPA2. `/admin` y `/admin/update` añaden HTTP Basic con un usuari
 y contraseña distintos. Si faltan credenciales, el AP o OTA se deshabilitan
 sin detener sensores, microSD o SIM800L.
 
-Los environments web, celular y VehicleSense usan `min_spiffs.csv`, con dos
+Los environments web, celular e integrado usan `min_spiffs.csv`, con dos
 particiones OTA. La primera carga se hace por USB. Para el perfil actual se
 compila:
 

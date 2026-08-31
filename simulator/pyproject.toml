@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "vehiclesense-simulator"
 version = "0.1.0"
-description = "Contract-valid multi-vehicle MQTT simulator for VehicleSense"
+description = "Contract-valid multi-vehicle MQTT simulator"
 requires-python = ">=3.12,<3.14"
 dependencies = [
   "jsonschema[format]>=4.23,<5",

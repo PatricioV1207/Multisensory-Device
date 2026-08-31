@@ -7,7 +7,7 @@
 
 // Public identities. They are not passwords, but each deployed device and
 // vehicle must use stable unique values.
-#define DEVICE_ID "vehiclesense_device_01"
+#define DEVICE_ID "device_01"
 #define VEHICLE_ID "vehicle_01"
 
 // ThingsBoard: use the device access token as MQTT_USERNAME and leave
@@ -18,7 +18,7 @@
 #define MQTT_PASSWORD ""
 #define MQTT_TOPIC "v1/devices/me/telemetry"
 
-// VehicleSense production transport: HiveMQ Cloud MQTT over TLS. The ESP32
+// Production transport: HiveMQ Cloud MQTT over TLS. The ESP32
 // uses the built-in CA bundle and still validates the broker hostname.
 #define HIVEMQ_HOST "YOUR_CLUSTER.s1.eu.hivemq.cloud"
 #define HIVEMQ_PORT 8883
@@ -47,7 +47,7 @@
 #define MQTT_TEST_TOPIC "buses/prototype/diagnostics"
 
 // Local WPA2 access point and separate HTTP Basic administrator credentials.
-#define LOCAL_AP_SSID "VehicleSense-Local"
+#define LOCAL_AP_SSID "Monitor-Local"
 #define LOCAL_AP_PASSWORD "YOUR_AP_PASSWORD_MIN_8_CHARS"
 #define LOCAL_ADMIN_USERNAME "admin"
 #define LOCAL_ADMIN_PASSWORD "YOUR_ADMIN_PASSWORD"
