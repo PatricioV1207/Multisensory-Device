@@ -115,9 +115,9 @@ flowchart LR
 
 La arquitectura separa el dispositivo, el transporte y la aplicación. El navegador
 no recibe credenciales MQTT ni se conecta directamente al broker; consume datos
-validados por el backend. AWS EC2 es la guía de despliegue de referencia, no una
-instancia productiva demostrada; HiveMQ Cloud permanece externo. La arquitectura
-completa y sus brechas están en [`docs/architecture.md`](docs/architecture.md).
+validados por el backend. AWS EC2 es el despliegue productivo de referencia y HiveMQ
+Cloud permanece externo; el estado público observado y las brechas están en
+[`STATUS.md`](STATUS.md) y [`docs/architecture.md`](docs/architecture.md).
 
 ### Componentes del repositorio
 
@@ -380,12 +380,13 @@ El último comando usa el entorno Python del backend, que incluye `jsonschema`.
 
 ## Estado actual
 
-El repositorio implementa los componentes principales, pero el sistema sigue
-**parcial y sin validación física o productiva registrada**. En particular, los
-comandos del firmware siempre responden `unsupported`, solo telemetría tiene replay
-durable, el clasificador acústico y SIM800L son experimentales, y AWS EC2 es una guía
-no aprovisionada. Consulte [`STATUS.md`](STATUS.md) para el corte detallado y
-[`ROADMAP.md`](ROADMAP.md) para las etapas pendientes.
+El repositorio implementa los componentes principales y la plataforma cloud ya está
+desplegada en EC2 según el estado reportado y las comprobaciones públicas fechadas.
+El sistema sigue **parcial**: los comandos del firmware responden `unsupported`, solo
+telemetría tiene replay durable, el clasificador acústico y SIM800L son
+experimentales, y el hardware no tiene validación física. Consulte
+[`STATUS.md`](STATUS.md) para el corte detallado y [`ROADMAP.md`](ROADMAP.md) para
+las etapas pendientes.
 
 ## Seguridad y uso responsable
 

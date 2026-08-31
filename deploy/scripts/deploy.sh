@@ -71,10 +71,11 @@ fi
 
 if [[ -z "${VEHICLESENSE_IMAGE_TAG:-}" || "$VEHICLESENSE_IMAGE_TAG" == "latest" ]]; then
   if git -C "$REPOSITORY_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    export VEHICLESENSE_IMAGE_TAG="$(git -C "$REPOSITORY_DIR" rev-parse --short=12 HEAD)"
+    VEHICLESENSE_IMAGE_TAG="$(git -C "$REPOSITORY_DIR" rev-parse --short=12 HEAD)"
   else
-    export VEHICLESENSE_IMAGE_TAG="latest"
+    VEHICLESENSE_IMAGE_TAG="latest"
   fi
+  export VEHICLESENSE_IMAGE_TAG
 fi
 
 compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
@@ -84,4 +85,8 @@ compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 "${compose[@]}" ps
 
 echo "The platform is running with image tag $VEHICLESENSE_IMAGE_TAG."
-echo "Check: https://$DOMAIN/health/live"
+if [[ "${NGINX_TEMPLATE:-http.conf.template}" == "https.conf.template" ]]; then
+  echo "Check: https://$DOMAIN/health/live"
+else
+  echo "Check before issuing the certificate: curl --fail -H 'Host: $DOMAIN' http://127.0.0.1/healthz"
+fi

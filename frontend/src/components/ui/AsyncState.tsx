@@ -1,11 +1,7 @@
 import { AlertCircle, Inbox, LoaderCircle, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function PageLoader({
-  label = "Cargando…",
-}: {
-  label?: string;
-}) {
+export function PageLoader({ label = "Cargando…" }: { label?: string }) {
   return (
     <div className="async-state" role="status">
       <LoaderCircle className="spin" size={28} />

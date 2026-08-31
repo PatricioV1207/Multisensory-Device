@@ -36,7 +36,8 @@ mkdir -p "$DEPLOY_DIR/backups"
 printf '%s\n' "$current_revision" >"$DEPLOY_DIR/backups/pre-update-git-revision.txt"
 
 git -C "$REPOSITORY_DIR" merge --ff-only "origin/$TARGET_BRANCH"
-export VEHICLESENSE_IMAGE_TAG="$(git -C "$REPOSITORY_DIR" rev-parse --short=12 HEAD)"
+VEHICLESENSE_IMAGE_TAG="$(git -C "$REPOSITORY_DIR" rev-parse --short=12 HEAD)"
+export VEHICLESENSE_IMAGE_TAG
 
 if ! ENV_FILE="$ENV_FILE" "$SCRIPT_DIR/deploy.sh"; then
   echo "Deployment failed. No database rollback was attempted." >&2

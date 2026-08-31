@@ -31,6 +31,9 @@ Pruebas de software cloud sin hardware:
 (cd simulator && uv sync --extra dev && uv run ruff check . \
   && uv run ruff format --check . && uv run pytest -q)
 (cd backend && uv run python ../contracts/validate_fixtures.py)
+(cd frontend && npm audit --audit-level=moderate)
+uvx pip-audit --path backend/.venv/lib/python3.13/site-packages --progress-spinner off
+uvx pip-audit --path simulator/.venv/lib/python3.13/site-packages --progress-spinner off
 docker compose --env-file deploy/.env.example \
   -f deploy/compose.production.yml config --quiet
 ```
@@ -334,11 +337,12 @@ comparando con la presión normalizada de una aplicación meteorológica.
 - Integración: durante 60 minutos no debe haber bloqueos, watchdog resets ni
   publicación de NaN; sin red las muestras deben seguir llegando a microSD.
 
-## Línea base verificable del 30 de agosto de 2026
+## Línea base verificable del 30–31 de agosto de 2026
 
-La matriz automatizada se ejecutó en el entorno local con estos resultados:
+La matriz de aplicación se ejecutó el día 30 y las validaciones de despliegue y
+dependencias se repitieron el día 31, con estos resultados:
 
-| Bloque | Evidencia 2026-08-30 |
+| Bloque | Evidencia 2026-08-30/31 |
 |---|---|
 | Builds ESP32 | 24/24 environments compilados |
 | Unity nativo | 34/34 casos aprobados |
@@ -347,8 +351,9 @@ La matriz automatizada se ejecutó en el entorno local con estos resultados:
 | Migraciones | Alembic SQLite `upgrade head → downgrade base → upgrade head` aprobado; `alembic upgrade head --sql` generó 330 líneas de SQL PostgreSQL offline |
 | Frontend | ESLint y Prettier limpios; Vitest 6/6; `npm run build` completó `tsc -b` y Vite |
 | Simulador | Ruff y formato limpios; pytest 10/10 |
-| Despliegue estático | `docker compose --env-file deploy/.env.example -f deploy/compose.production.yml config --quiet` aprobado |
-| Archivos operativos | `bash -n` de scripts y validación de sintaxis JSON aprobados |
+| Despliegue local | Compose estático, build ARM64, stack PostgreSQL/backend/frontend/Nginx, Alembic, login, aislamiento de puertos y backup/restore aprobados; HTTPS pasó `nginx -t` con certificado efímero |
+| Dependencias | `npm audit` y `pip-audit` sin vulnerabilidades conocidas después de actualizar locks |
+| Archivos operativos | `bash -n`, ShellCheck y Hadolint aprobados; sintaxis JSON válida |
 
 La primera ejecución desde el Python global,
 `python3 contracts/validate_fixtures.py`, falló porque ese intérprete no tenía
@@ -357,7 +362,9 @@ instalado `jsonschema`. La repetición con
 válidos y rechazó los 7 inválidos. Es un requisito del entorno de validación, no un
 fallo contractual.
 
-Esta línea base es exclusivamente automatizada/local. La generación SQL offline no
-abrió una conexión PostgreSQL. Tampoco demuestra placa o sensores físicos, HiveMQ u
-otro broker real, ejecución de contenedores Docker, E2E cloud ni AWS aprovisionada.
+Esta línea base automatizada sigue siendo local. La generación SQL offline no abrió
+una conexión PostgreSQL externa; la prueba Docker usó PostgreSQL local y MQTT sin
+broker, por lo que `/health/ready` devolvió el 503 esperado. Las comprobaciones
+públicas de producción y su alcance están registradas por separado en `STATUS.md`;
+esta matriz no demuestra placa o sensores físicos ni sustituye una E2E cloud completa.
 Consulte [`../STATUS.md`](../STATUS.md) para el corte vigente.

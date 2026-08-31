@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def arguments(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Publish contract-valid simulated vehicle devices"
-    )
+    parser = argparse.ArgumentParser(description="Publish contract-valid simulated vehicle devices")
     parser.add_argument("--dry-run", action="store_true", help="validate without connecting")
     parser.add_argument("--cycles", type=int, default=0, help="0 runs until interrupted")
     parser.add_argument("--vehicles", type=int, help="override environment vehicle count")

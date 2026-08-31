@@ -1,9 +1,9 @@
 # Despliegue de referencia
 
-El proveedor documental de referencia es **AWS EC2** sobre Ubuntu 24.04. No hay
-evidencia en el repositorio de una instancia aprovisionada o validada. La
-topología funcional no cambia y HiveMQ Cloud continúa siendo un servicio
-externo:
+El proveedor de referencia es **AWS EC2** sobre Ubuntu 24.04. El despliegue actual
+está reportado como operativo y sus endpoints públicos fueron comprobados el
+2026-08-31; el repositorio no almacena inventario de AWS, secretos ni logs privados.
+La topología funcional no cambia y HiveMQ Cloud continúa siendo un servicio externo:
 
 ```text
 ESP32 ── MQTT/TLS 8883 ──► HiveMQ Cloud ──► FastAPI ──► PostgreSQL
@@ -50,6 +50,11 @@ chmod 600 deploy/.env
 # Editar deploy/.env y reemplazar todos los placeholders.
 ./deploy/scripts/deploy.sh
 ```
+
+Con `NGINX_TEMPLATE=http.conf.template`, el primer arranque se comprueba por HTTP
+solo para poder emitir el certificado; no introduzca credenciales en el navegador
+hasta completar Certbot y cambiar a `https.conf.template`. La guía AWS contiene el
+orden exacto de DNS, primer arranque y HTTPS.
 
 El backend ejecuta `alembic upgrade head` antes de iniciar. No use
 `alembic downgrade`, `pg_restore` ni un rollback de código sin revisar antes

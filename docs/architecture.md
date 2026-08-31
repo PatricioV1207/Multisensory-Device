@@ -50,7 +50,7 @@ flowchart LR
 | PostgreSQL | estado e historial normalizados | sin cleanup de retención ni evidencia productiva |
 | Frontend React | consulta y operación mediante backend | no es frontera de autorización; Settings no configura |
 | Simulador | productor contractual reproducible | no demuestra sensores ni ejecución real de comandos |
-| Deploy | Nginx, frontend, backend, PostgreSQL y Certbot en una VM | AWS es guía, no infraestructura comprobada; OCI es histórica |
+| Deploy | Nginx, frontend, backend, PostgreSQL y Certbot en una VM | AWS EC2 es la VM productiva reportada; sigue siendo una topología única sin HA; OCI es histórica |
 
 ## Flujo de datos del dispositivo
 
@@ -144,8 +144,10 @@ AWS EC2 es el proveedor documental de referencia y OCI una alternativa históric
 La topología es de una instancia, sin alta disponibilidad. Los scripts canónicos son
 `backup_postgres.sh` y `restore_postgres.sh`; backup genera dump/checksum, pero copia
 externa, cifrado, retención y pruebas de restore son responsabilidades operativas.
-No hay evidencia en el repositorio de una EC2 aprovisionada o de este stack ejecutado
-contra PostgreSQL/HiveMQ reales.
+El repositorio no contiene inventario AWS ni logs privados. El contexto de despliegue
+del 2026-08-31 y las comprobaciones públicas de `/health/live` y `/health/ready`
+reportan el stack operativo contra PostgreSQL y HiveMQ reales; no sustituyen una
+auditoría de la VM, backups externos o una prueba física del ESP32.
 
 ## Fronteras de confianza y seguridad
 
@@ -175,5 +177,6 @@ seguridad vehicular certificado.
 - Sin ACL por vehículo, sesiones revocables/logout ni API de historial de estado.
 - Sin reglas de alerta genéricas, cola interna de ingesta acotada o cleanup.
 - SIM800L/TLS y clasificador acústico no validados en campo.
-- OTA sin firma/rollback; producción AWS no aprovisionada ni observada.
+- OTA sin firma/rollback; producción AWS es una sola VM y aún requiere observabilidad,
+  backups externos y verificación operativa continuada.
 - PCB Rev A en borrador y bloqueada antes de fabricar.

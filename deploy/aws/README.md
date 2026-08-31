@@ -2,9 +2,9 @@
 
 Esta guía despliega toda la plataforma cloud en una única
 instancia EC2 Ubuntu 24.04, manteniendo HiveMQ Cloud como broker MQTT externo.
-No contiene credenciales ni ejecuta operaciones sobre una cuenta AWS. Es un
-procedimiento de referencia: el repositorio no demuestra que la instancia, DNS,
-certificados, PostgreSQL o broker estén aprovisionados o validados.
+No contiene credenciales ni ejecuta operaciones sobre una cuenta AWS. Es el
+procedimiento de referencia para la instancia ya desplegada; el estado público
+observado y los límites restantes se registran en `STATUS.md`.
 
 ## 1. Arquitectura resultante
 
@@ -207,6 +207,12 @@ docker compose --env-file deploy/.env \
 curl --fail -H 'Host: vehiclemonitorsense.me' http://127.0.0.1/healthz
 ```
 
+En este punto la plataforma ya sirve el frontend por HTTP. Desde otro equipo puede
+comprobar que aparece la página con `http://vehiclemonitorsense.me`, pero **no inicie
+sesión ni envíe datos reales antes de activar HTTPS**. Si el `curl` local funciona y
+el dominio sigue mostrando el sitio anterior o no responde, el problema está en DNS,
+la asociación de la Elastic IP o las reglas 80/443 del Security Group, no en React.
+
 El entrypoint del backend ejecuta automáticamente `alembic upgrade head` y no
 arranca la API si la migración falla. Revise el estado sin modificar datos:
 
@@ -254,7 +260,9 @@ curl --fail https://vehiclemonitorsense.me/health/live
 curl -I https://www.vehiclemonitorsense.me/
 ```
 
-`www` debe redirigir al dominio raíz. Para renovación automática:
+`www` debe redirigir al dominio raíz. Ahora la página de acceso debe abrir en
+`https://vehiclemonitorsense.me`; use únicamente esa URL para iniciar sesión. Para
+renovación automática:
 
 ```bash
 sudo crontab -e
