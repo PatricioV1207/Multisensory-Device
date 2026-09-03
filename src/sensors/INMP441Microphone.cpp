@@ -26,7 +26,9 @@ bool INMP441Microphone::begin() {
   config.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_RX);
   config.sample_rate = ACOUSTIC_SAMPLE_RATE_HZ;
   config.bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT;
-  config.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;
+  config.channel_format = ACOUSTIC_I2S_USE_RIGHT_CHANNEL != 0
+                              ? I2S_CHANNEL_FMT_ONLY_RIGHT
+                              : I2S_CHANNEL_FMT_ONLY_LEFT;
   config.communication_format = I2S_COMM_FORMAT_STAND_I2S;
   config.intr_alloc_flags = ESP_INTR_FLAG_LEVEL1;
   config.dma_buf_count = 4;
@@ -71,9 +73,12 @@ bool INMP441Microphone::begin() {
     return false;
   }
   _started = true;
-  Logger::info("AUDIO", "INMP441 I2S started at " +
-                            String(ACOUSTIC_SAMPLE_RATE_HZ) +
-                            " Hz; output is relative dBFS, not dB SPL");
+  Logger::info(
+      "AUDIO",
+      "INMP441 I2S started at " + String(ACOUSTIC_SAMPLE_RATE_HZ) +
+          " Hz channel=" +
+          String(ACOUSTIC_I2S_USE_RIGHT_CHANNEL != 0 ? "right" : "left") +
+          "; output is relative dBFS, not dB SPL");
   return true;
 }
 

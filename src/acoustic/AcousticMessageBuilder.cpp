@@ -35,7 +35,7 @@ bool validIdentifier(const char* value, size_t maximumLength) {
 bool validCategory(const char* category) {
   constexpr const char* categories[] = {
       "traffic", "music", "speech", "engine", "horn",
-      "siren",   "wind",  "quiet",  "unknown"};
+      "siren",   "wind",  "quiet",  "noise", "unknown"};
   if (category == nullptr) {
     return false;
   }

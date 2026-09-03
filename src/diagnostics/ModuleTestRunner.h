@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <WiFiClient.h>
 #include "diagnostics/BarometerCalibrationRunner.h"
+#include "diagnostics/INMP441RawDiagnostic.h"
 #include "acoustic/AcousticDatasetLogger.h"
 #include "communication/MQTTClientCustom.h"
 #include "communication/SIM800LModem.h"
@@ -34,6 +35,7 @@ class ModuleTestRunner {
   DHT11Sensor _dht;
   GPSNeo6M _gps;
   INMP441Microphone _microphone;
+  INMP441RawDiagnostic _microphoneRawDiagnostic;
   ADXL345Accel _accel;
   L3G4200DGyro _gyro;
   HMC5883LMag _mag;

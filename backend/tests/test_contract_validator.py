@@ -42,3 +42,25 @@ def test_rejects_unsupported_or_branch_mismatched_message() -> None:
     topic = "vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/events"
     with pytest.raises(ContractValidationError, match="message_type"):
         validator.validate(topic, json.dumps(payload))
+
+
+def test_accepts_neutral_noise_category_in_acoustic_and_telemetry() -> None:
+    validator = ContractValidator(settings_for("sqlite+aiosqlite:///:memory:"))
+
+    acoustic = contract_fixture("acoustic_v1_simulated.json")
+    acoustic["category"] = "noise"
+    acoustic_topic = (
+        "vehiclesense/v1/vehicles/sim-vehicle-001/devices/"
+        "sim-device-001/acoustic"
+    )
+    message = validator.validate(acoustic_topic, json.dumps(acoustic))
+    assert message.payload["category"] == "noise"
+
+    telemetry = contract_fixture("telemetry_v3_full_simulated.json")
+    telemetry["acoustic_category"] = "noise"
+    telemetry_topic = (
+        "vehiclesense/v1/vehicles/sim-vehicle-001/devices/"
+        "sim-device-001/telemetry"
+    )
+    message = validator.validate(telemetry_topic, json.dumps(telemetry))
+    assert message.payload["acoustic_category"] == "noise"

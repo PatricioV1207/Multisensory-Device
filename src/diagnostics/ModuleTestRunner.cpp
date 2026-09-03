@@ -72,13 +72,15 @@ void ModuleTestRunner::begin() {
     _storage.begin();
   } else if (APP_MODE == APP_MODE_TEST_INMP441) {
     _microphone.begin();
+  } else if (APP_MODE == APP_MODE_DIAGNOSE_INMP441_RAW) {
+    _microphoneRawDiagnostic.begin();
   } else if (APP_MODE == APP_MODE_COLLECT_ACOUSTIC_FEATURES) {
     _storage.begin();
     if (_storage.isReady()) {
       _acousticDataset.begin();
     }
     _microphone.begin();
-    Logger::info("AUDIO", "Labels: q=quiet w=wind e=engine p=speech "
+    Logger::info("AUDIO", "Labels: q=quiet w=wind n=noise e=engine p=speech "
                            "m=music h=horn s=siren t=traffic u=unknown x=pause");
   } else if (APP_MODE == APP_MODE_TEST_SIM800L_AT) {
     _modem.begin(SIM800LMode::AtOnly);
@@ -151,6 +153,8 @@ void ModuleTestRunner::update(uint32_t nowMs) {
     }
   } else if (APP_MODE == APP_MODE_TEST_INMP441) {
     _microphone.update(nowMs);
+  } else if (APP_MODE == APP_MODE_DIAGNOSE_INMP441_RAW) {
+    _microphoneRawDiagnostic.update();
   } else if (APP_MODE == APP_MODE_COLLECT_ACOUSTIC_FEATURES) {
     _storage.update(nowMs);
     _microphone.update(nowMs);
@@ -260,6 +264,32 @@ void ModuleTestRunner::printReadings(uint32_t nowMs) {
                   static_cast<unsigned long>(d.bootSession),
                   static_cast<unsigned>(d.segment),
                   static_cast<unsigned long long>(d.freeBytes));
+  } else if (APP_MODE == APP_MODE_DIAGNOSE_INMP441_RAW) {
+    const INMP441RawSnapshot d = _microphoneRawDiagnostic.takeSnapshot();
+    const INMP441RawSlotStats& slot0 = d.slots[0];
+    const INMP441RawSlotStats& slot1 = d.slots[1];
+    const uint64_t meanAbs0 =
+        slot0.samples == 0U ? 0U : slot0.absoluteSum / slot0.samples;
+    const uint64_t meanAbs1 =
+        slot1.samples == 0U ? 0U : slot1.absoluteSum / slot1.samples;
+    Serial.printf(
+        "[DIAG_INMP441_RAW] driver=%d reads=%lu failures=%lu bytes=%lu "
+        "slot0(samples=%lu nonzero=%lu changes=%lu min=%ld max=%ld "
+        "mean_abs=%llu) slot1(samples=%lu nonzero=%lu changes=%lu min=%ld "
+        "max=%ld mean_abs=%llu)\n",
+        d.driverReady, static_cast<unsigned long>(d.successfulReads),
+        static_cast<unsigned long>(d.failedReads),
+        static_cast<unsigned long>(d.bytesRead),
+        static_cast<unsigned long>(slot0.samples),
+        static_cast<unsigned long>(slot0.nonzero),
+        static_cast<unsigned long>(slot0.changes),
+        static_cast<long>(slot0.minimum), static_cast<long>(slot0.maximum),
+        static_cast<unsigned long long>(meanAbs0),
+        static_cast<unsigned long>(slot1.samples),
+        static_cast<unsigned long>(slot1.nonzero),
+        static_cast<unsigned long>(slot1.changes),
+        static_cast<long>(slot1.minimum), static_cast<long>(slot1.maximum),
+        static_cast<unsigned long long>(meanAbs1));
   } else if (APP_MODE == APP_MODE_TEST_INMP441 ||
              APP_MODE == APP_MODE_COLLECT_ACOUSTIC_FEATURES) {
     const AcousticData d = _microphone.getData();
@@ -309,6 +339,7 @@ void ModuleTestRunner::updateAcousticCollection(uint32_t nowMs) {
     switch (command) {
       case 'q': label = "quiet"; break;
       case 'w': label = "wind"; break;
+      case 'n': label = "noise"; break;
       case 'e': label = "engine"; break;
       case 'p': label = "speech"; break;
       case 'm': label = "music"; break;

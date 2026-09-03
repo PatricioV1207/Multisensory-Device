@@ -55,7 +55,7 @@
     "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$" },
     "counter": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
     "ratio": { "type": "number", "minimum": 0, "maximum": 1 },
-    "category": { "enum": ["traffic", "music", "speech", "engine", "horn", "siren", "wind", "quiet", "unknown"] }
+    "category": { "enum": ["traffic", "music", "speech", "engine", "horn", "siren", "wind", "quiet", "noise", "unknown"] }
   },
   "allOf": [
     {

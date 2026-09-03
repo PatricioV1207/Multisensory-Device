@@ -85,6 +85,11 @@ SIM800L. La selección `L/R = GND` es obligatoria con la configuración actual,
 que captura únicamente el canal izquierdo. Si el módulo se configura como
 canal derecho, el diagnóstico mostrará señal ausente o inválida.
 
+En la sesión física del 2026-09-03, el ESP32-D0WD-V3 y el framework Arduino
+vigente recuperaron ese canal físico mediante el selector mono
+`I2S_CHANNEL_FMT_ONLY_RIGHT` del driver. Los perfiles acústicos aplican esa
+selección internamente; esto no cambia el cableado: `L/R` debe seguir en GND.
+
 Antes de integrar el micrófono al vehículo, ejecuta `test_inmp441` y confirma
 físicamente que voz, palmadas y silencio cambian el nivel y las características.
 Que el firmware compile no prueba el pinout ni la integridad de la señal I2S.

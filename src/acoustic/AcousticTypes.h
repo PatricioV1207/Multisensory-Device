@@ -67,7 +67,7 @@ struct AcousticClassification {
 
   const char* category = "unknown";
   float confidence = 0.0F;
-  const char* classifierVersion = "heuristic-1";
+  const char* classifierVersion = "heuristic-4";
 };
 
 struct AcousticAlertStatus {

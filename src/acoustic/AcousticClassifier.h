@@ -4,7 +4,7 @@
 
 class AcousticClassifier {
  public:
-  static constexpr const char* VERSION = "heuristic-1";
+  static constexpr const char* VERSION = "heuristic-4";
 
   static AcousticClassification classify(const AudioFeatures& features);
 };

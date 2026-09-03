@@ -26,10 +26,28 @@ contrato se omiten del JSON.
 
 ## Clasificación y alertas
 
-`heuristic-1` produce `traffic`, `music`, `speech`, `engine`, `horn`, `siren`,
-`wind`, `quiet` o `unknown`. Las reglas priorizan `unknown` cuando una sola
-ventana no aporta evidencia suficiente. En particular, una ventana espectral
-no demuestra por sí sola la modulación temporal de una sirena.
+`heuristic-4` produce `traffic`, `music`, `speech`, `engine`, `horn`, `siren`,
+`wind`, `quiet`, `noise` o `unknown`. `unknown` queda reservado para entrada
+inválida, sin respuesta, no finita o con clipping. Una señal válida que no
+encaja en una firma específica se asigna a `speech` con confianza baja o a la
+categoría neutral `noise`; ninguna de las dos puede crear una alerta acústica.
+En particular, una ventana espectral no demuestra por sí sola la modulación
+temporal de una sirena.
+
+La primera calibración física dejó el umbral provisional de silencio en
+-88 dBFS. Añadió dos firmas conservadoras de claxon observadas desde el interior:
+una para un vehículo posterior, con energía dominante entre 2 y 4 kHz, y otra
+para el claxon del propio vehículo, con energía dominante entre 250 y 800 Hz.
+Ambas devuelven confianza menor que 0.68, de modo que sirven para recopilar y
+revisar categorías pero todavía no activan alertas por sí solas.
+
+Los candidatos de voz priorizan energía entre 250 y 2000 Hz, contenido de
+presencia hasta 4 kHz y espectro moderadamente tonal. Los candidatos de tráfico
+priorizan ruido más ancho, mayor cruce por cero o energía por encima de 2 kHz,
+y exigen más de -45 dBFS. Ese límite conservador evita llamar tráfico al fondo
+de un cuarto con una impresora 3D, observado entre aproximadamente -89.6 y
+-65.8 dBFS. Esta separación no demuestra precisión frente a tráfico vehicular
+real y debe revisarse con muestras etiquetadas dentro del automóvil.
 
 Solo `traffic`, `horn` y `siren` pueden convertirse en eventos. De forma
 predeterminada requieren nivel mínimo de -40 dBFS, confianza de 0.68,
@@ -63,7 +81,7 @@ micrófono, montaje y carcasa.
 
 ## Limitaciones pendientes
 
-- Validación física del pinout y del canal izquierdo.
+- Repetir la validación del selector I2S en otras unidades ESP32/INMP441.
 - Medición de precisión con un dataset balanceado.
 - Características temporales específicas de sirena.
 - Calibración dB SPL, si el caso de uso llega a exigirla.

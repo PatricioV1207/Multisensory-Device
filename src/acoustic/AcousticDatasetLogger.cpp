@@ -12,7 +12,7 @@ constexpr const char* kDatasetDirectory = "/acoustic";
 constexpr const char* kDatasetPath = "/acoustic/features.jsonl";
 constexpr const char* kLabels[] = {"quiet", "wind", "engine", "speech",
                                    "music", "horn", "siren", "traffic",
-                                   "unknown"};
+                                   "noise", "unknown"};
 }
 
 bool AcousticDatasetLogger::begin() {

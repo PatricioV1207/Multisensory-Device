@@ -118,6 +118,38 @@ operativos que no hayan sido observados.
   sin coincidencias del nombre, build del perfil integrado, lint/pruebas/build del
   frontend, Ruff/pytest del backend y simulador, fixtures contractuales y sintaxis
   de los scripts de despliegue modificados.
+- El 2026-09-03 se añadió `diagnose_inmp441_raw`, un perfil aislado que lee ambos
+  slots I2S y reporta estadísticas de palabras crudas. Una ejecución física
+  aportada por el usuario mostró `driver=1`, aproximadamente 250 lecturas por
+  intervalo, cero fallos, `slot0` con 32 000 palabras casi todas no nulas y
+  variables, y `slot1` completamente en cero. Esto valida actividad digital desde
+  el INMP441 hasta el receptor I2S, pero no la exactitud acústica ni la selección
+  mono del perfil integrado. Una variante provisional con el selector opuesto
+  permitió comprobar el slot activo sin cambiar inicialmente `vehiclesense_wifi`.
+  La prueba controlada posterior produjo `mic=1` y `analysis=1`: el silencio quedó aproximadamente entre
+  -89.9 y -89.3 dBFS; un tono de 1 kHz subió a entre -80.6 y -80.0 dBFS y concentró
+  entre 82.6 % y 84.1 % de energía en la banda 800--2000 Hz; las palmadas elevaron
+  el pico hasta aproximadamente -51 dBFS. Esto valida respuesta relativa y
+  discriminación espectral aproximada, no dB SPL ni precisión del clasificador.
+  `test_inmp441`, `collect_acoustic_features` y `vehiclesense_wifi` usan ahora el
+  selector mono del driver validado físicamente; `L/R` permanece cableado a GND.
+  La calibración provisional `heuristic-4` fija silencio en -88 dBFS y reconoce
+  como `horn`, con confianza inferior al umbral de alerta, los patrones aportados
+  para un claxon posterior y el claxon del propio vehículo. Las pruebas de
+  regresión no sustituyen un dataset balanceado ni miden falsos positivos. Una
+  captura posterior en un cuarto con impresora 3D activa y conversación
+  ocasional observó aproximadamente -89.6 a -65.8 dBFS, centroide de 2.6 a
+  3.7 kHz y flatness de 0.36 a 0.50. `heuristic-4` clasifica ese fondo como
+  `noise`, reserva `traffic` para señales superiores a -45 dBFS y no permite
+  que `noise` genere alertas. Esto reduce el falso positivo observado, pero no
+  mide precisión frente a tráfico vehicular real. `unknown` queda para señal
+  inválida, detenida, no finita o con clipping. La comprobación física posterior
+  observó `noise` tanto en el colector como en el payload de `vehiclesense_wifi`;
+  las pruebas pasaron 9/9 casos acústicos, 11/11 casos de payload/validación,
+  6/6 casos del validador backend y 9 fixtures válidos/7 inválidos. Ambos perfiles
+  ESP32 compilaron y se cargaron por USB. Durante la última lectura el punto WiFi
+  no estuvo disponible, por lo que no se validó la aceptación de `noise` en la
+  instancia productiva.
 
 ### Observaciones históricas no reproducibles
 
@@ -152,7 +184,7 @@ hardware.
   ser “Real/no simulado” hasta disponer de procedencia productiva verificable.
 - Los viajes se infieren por GPS. No existen ignición, OBD, combustible ni diagnóstico
   certificado.
-- dBFS es relativo y el clasificador `heuristic-1` no tiene precisión validada.
+- dBFS es relativo y el clasificador `heuristic-4` no tiene precisión validada.
 - SIM800L depende de 2G, alimentación y TLS del entorno; no es ruta aceptada de
   producción.
 - No hay política automatizada de retención ni prueba de restore/operación real.

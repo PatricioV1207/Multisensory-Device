@@ -231,6 +231,29 @@ Los valores son **dBFS relativos** al rango digital del micrófono. No son dB
 SPL y no permiten afirmar cumplimiento de límites legales de ruido sin una
 fuente acústica calibrada y una curva de calibración del conjunto.
 
+Si `test_inmp441` reporta `mic=0` y `-160 dBFS` pese a tener 3.3 V y continuidad
+correcta, carga el diagnóstico crudo de ambos slots I2S:
+
+```bash
+pio run -e diagnose_inmp441_raw -t upload
+pio device monitor -b 115200
+```
+
+La línea `DIAG_INMP441_RAW` informa lecturas DMA, fallos y, para `slot0` y
+`slot1`, cantidad de muestras, valores no cero, cambios, mínimo, máximo y
+amplitud absoluta media. Haz silencio y luego habla o da palmadas cerca del
+micrófono. Un slot con muchos valores no cero y rango variable confirma datos
+en `SD`; ambos slots completamente en cero apuntan a falta de datos en `SD`,
+reloj que no llega al módulo o módulo defectuoso. Los nombres `slot0` y `slot1`
+son deliberadamente neutrales: el objetivo es detectar datos aunque el canal
+observado no coincida con la selección esperada.
+
+La sesión física del 2026-09-03 encontró datos en `slot0` y cero en `slot1`. En
+este ESP32 y framework, el selector mono del driver que recuperó ese slot fue
+`I2S_CHANNEL_FMT_ONLY_RIGHT`, aunque el INMP441 permanece físicamente con
+`L/R = GND`. Esa selección ya se aplica en `test_inmp441`,
+`collect_acoustic_features` y `vehiclesense_wifi`; no cambies `L/R` a 3.3 V.
+
 Para construir un dataset de características, inserta una microSD y ejecuta:
 
 ```bash
@@ -238,8 +261,9 @@ pio run -e collect_acoustic_features -t upload
 pio device monitor -b 115200
 ```
 
-Selecciona la etiqueta desde el monitor: `q` quiet, `w` wind, `e` engine, `p`
-speech, `m` music, `h` horn, `s` siren, `t` traffic, `u` unknown y `x` pausa.
+Selecciona la etiqueta desde el monitor: `q` quiet, `w` wind, `n` noise, `e`
+engine, `p` speech, `m` music, `h` horn, `s` siren, `t` traffic, `u` unknown y
+`x` pausa.
 Cada agregado válido se guarda en `/acoustic/features.jsonl`. Anota para cada
 sesión el lugar, vehículo, distancia al sonido, ventanas, etiqueta y
 condiciones. No se almacena audio crudo.

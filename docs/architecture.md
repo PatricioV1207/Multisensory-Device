@@ -172,8 +172,8 @@ JWT no revocables, OTA sin firma, secretos administrados manualmente, falta de M
 retención y observabilidad incompletas y una sola VM.
 
 GPS es dato sensible. No se almacena audio crudo; dBFS no equivale a dB SPL y
-`heuristic-1` carece de dataset de validación. Este proyecto no es un sistema de
-seguridad vehicular certificado.
+`heuristic-4` carece de un dataset balanceado de validación. Este proyecto no es
+un sistema de seguridad vehicular certificado.
 
 ## Brechas explícitas
 

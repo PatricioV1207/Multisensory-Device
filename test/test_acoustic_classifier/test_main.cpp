@@ -76,8 +76,8 @@ void test_clipping_and_zero_signal_are_explicit() {
   TEST_ASSERT_FALSE(disconnected.signalResponsive);
 }
 
-void test_classifier_is_conservative_for_quiet_tone_and_ambiguity() {
-  fillSine(1000.0F, 0.0005F);
+void test_classifier_routes_valid_audio_without_promoting_alerts() {
+  fillSine(1000.0F, 0.00005F);
   AudioFeatures quiet;
   TEST_ASSERT_TRUE(extractor.analyze(samples, kSamples, kSampleRate, quiet));
   AcousticClassification quietResult = AcousticClassifier::classify(quiet);
@@ -93,9 +93,107 @@ void test_classifier_is_conservative_for_quiet_tone_and_ambiguity() {
   ambiguous.spectralCentroidHz = 5000.0F;
   ambiguous.spectralFlatness = 0.90F;
   ambiguous.bands = {0.02F, 0.03F, 0.05F, 0.35F, 0.55F};
-  AcousticClassification unknown = AcousticClassifier::classify(ambiguous);
-  TEST_ASSERT_EQUAL_STRING("unknown", unknown.category);
-  TEST_ASSERT_LESS_THAN_FLOAT(0.30F, unknown.confidence);
+  AcousticClassification traffic = AcousticClassifier::classify(ambiguous);
+  TEST_ASSERT_EQUAL_STRING("traffic", traffic.category);
+  TEST_ASSERT_LESS_THAN_FLOAT(0.68F, traffic.confidence);
+
+  AudioFeatures speech = featureTemplate();
+  speech.relativeLevelDbfs = -72.0F;
+  speech.zeroCrossingRate = 0.18F;
+  speech.spectralCentroidHz = 1450.0F;
+  speech.spectralFlatness = 0.24F;
+  speech.bands = {0.08F, 0.30F, 0.34F, 0.20F, 0.08F};
+  AcousticClassification speechResult = AcousticClassifier::classify(speech);
+  TEST_ASSERT_EQUAL_STRING("speech", speechResult.category);
+  TEST_ASSERT_LESS_THAN_FLOAT(0.68F, speechResult.confidence);
+
+  AudioFeatures invalid = featureTemplate();
+  invalid.signalResponsive = false;
+  TEST_ASSERT_EQUAL_STRING(
+      "unknown", AcousticClassifier::classify(invalid).category);
+}
+
+void test_physical_cabin_vectors_keep_horn_confidence_below_alert_threshold() {
+  AudioFeatures silence = featureTemplate();
+  silence.relativeLevelDbfs = -89.57F;
+  silence.peakDbfs = -77.26F;
+  silence.crestFactor = 3.600F;
+  silence.zeroCrossingRate = 0.3996F;
+  silence.spectralCentroidHz = 3713.0F;
+  silence.spectralFlatness = 0.5105F;
+  silence.spectralRolloffHz = 6638.7F;
+  silence.bands = {0.0619F, 0.0910F, 0.1540F, 0.2271F, 0.4660F};
+  TEST_ASSERT_EQUAL_STRING("quiet",
+                           AcousticClassifier::classify(silence).category);
+
+  AudioFeatures externalHorn = featureTemplate();
+  externalHorn.relativeLevelDbfs = -85.65F;
+  externalHorn.peakDbfs = -73.97F;
+  externalHorn.crestFactor = 3.283F;
+  externalHorn.zeroCrossingRate = 0.3708F;
+  externalHorn.spectralCentroidHz = 3122.7F;
+  externalHorn.spectralFlatness = 0.2161F;
+  externalHorn.spectralRolloffHz = 4546.9F;
+  externalHorn.bands = {0.0235F, 0.1841F, 0.0478F, 0.5545F, 0.1900F};
+  const AcousticClassification externalResult =
+      AcousticClassifier::classify(externalHorn);
+  TEST_ASSERT_EQUAL_STRING("horn", externalResult.category);
+  TEST_ASSERT_LESS_THAN_FLOAT(0.68F, externalResult.confidence);
+
+  AudioFeatures ownHorn = featureTemplate();
+  ownHorn.relativeLevelDbfs = -69.64F;
+  ownHorn.peakDbfs = -49.19F;
+  ownHorn.crestFactor = 3.895F;
+  ownHorn.zeroCrossingRate = 0.2187F;
+  ownHorn.spectralCentroidHz = 1558.0F;
+  ownHorn.spectralFlatness = 0.2244F;
+  ownHorn.spectralRolloffHz = 3658.2F;
+  ownHorn.bands = {0.2077F, 0.4276F, 0.1000F, 0.1151F, 0.1495F};
+  const AcousticClassification ownResult =
+      AcousticClassifier::classify(ownHorn);
+  TEST_ASSERT_EQUAL_STRING("horn", ownResult.category);
+  TEST_ASSERT_LESS_THAN_FLOAT(0.68F, ownResult.confidence);
+
+  AudioFeatures clap = featureTemplate();
+  clap.relativeLevelDbfs = -84.20F;
+  clap.peakDbfs = -50.96F;
+  clap.crestFactor = 4.227F;
+  clap.zeroCrossingRate = 0.3970F;
+  clap.spectralCentroidHz = 3591.9F;
+  clap.spectralFlatness = 0.4874F;
+  clap.spectralRolloffHz = 6478.5F;
+  clap.bands = {0.0639F, 0.1010F, 0.1627F, 0.2312F, 0.4411F};
+  const AcousticClassification clapResult =
+      AcousticClassifier::classify(clap);
+  TEST_ASSERT_EQUAL_STRING("noise", clapResult.category);
+  TEST_ASSERT_LESS_THAN_FLOAT(0.68F, clapResult.confidence);
+}
+
+void test_room_printer_background_is_neutral_noise() {
+  AudioFeatures printer = featureTemplate();
+  printer.relativeLevelDbfs = -84.17F;
+  printer.peakDbfs = -67.37F;
+  printer.crestFactor = 3.297F;
+  printer.zeroCrossingRate = 0.2886F;
+  printer.spectralCentroidHz = 3445.6F;
+  printer.spectralFlatness = 0.4839F;
+  printer.spectralRolloffHz = 6477.5F;
+  printer.bands = {0.1244F, 0.1067F, 0.1318F, 0.2004F, 0.4368F};
+  TEST_ASSERT_EQUAL_STRING(
+      "noise", AcousticClassifier::classify(printer).category);
+
+  AudioFeatures printerWithRoomSpeech = featureTemplate();
+  printerWithRoomSpeech.relativeLevelDbfs = -65.79F;
+  printerWithRoomSpeech.peakDbfs = -42.66F;
+  printerWithRoomSpeech.crestFactor = 2.997F;
+  printerWithRoomSpeech.zeroCrossingRate = 0.1667F;
+  printerWithRoomSpeech.spectralCentroidHz = 2629.1F;
+  printerWithRoomSpeech.spectralFlatness = 0.3709F;
+  printerWithRoomSpeech.spectralRolloffHz = 5145.5F;
+  printerWithRoomSpeech.bands = {0.3202F, 0.0900F, 0.1099F, 0.1495F,
+                                 0.3304F};
+  TEST_ASSERT_EQUAL_STRING(
+      "noise", AcousticClassifier::classify(printerWithRoomSpeech).category);
 }
 
 void test_accumulator_averages_linear_energy() {
@@ -250,7 +348,10 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_fft_finds_one_kilohertz_tone);
   RUN_TEST(test_clipping_and_zero_signal_are_explicit);
-  RUN_TEST(test_classifier_is_conservative_for_quiet_tone_and_ambiguity);
+  RUN_TEST(test_classifier_routes_valid_audio_without_promoting_alerts);
+  RUN_TEST(
+      test_physical_cabin_vectors_keep_horn_confidence_below_alert_threshold);
+  RUN_TEST(test_room_printer_background_is_neutral_noise);
   RUN_TEST(test_accumulator_averages_linear_energy);
   RUN_TEST(test_alert_requires_confidence_duration_and_no_clipping);
   RUN_TEST(test_acoustic_and_event_messages_match_public_contract);
