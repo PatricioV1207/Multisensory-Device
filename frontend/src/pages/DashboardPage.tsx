@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Link, useOutletContext } from "react-router-dom";
 import { ConnectivityDonut } from "../components/charts/ConnectivityDonut";
-import { TelemetryChart } from "../components/charts/TelemetryChart";
+import { FleetMetricChart } from "../components/charts/FleetMetricChart";
 import { FleetMap } from "../components/maps/VehicleMap";
 import { ErrorState, PageLoader } from "../components/ui/AsyncState";
 import { LiveIndicator } from "../components/ui/LiveIndicator";
@@ -73,13 +73,13 @@ export function DashboardPage() {
   }
   const data = dashboard.data;
   const temperatureChart = data.vehicles.map((vehicle) => ({
-    time: vehicle.display_name.replace("Vehículo ", "V"),
+    label: vehicle.display_name.replace("Vehículo ", "V"),
     value: vehicle.latest_telemetry?.validity.dht
       ? (vehicle.latest_telemetry.temperature_c ?? null)
       : null,
   }));
   const speedChart = data.vehicles.map((vehicle) => ({
-    time: vehicle.display_name.replace("Vehículo ", "V"),
+    label: vehicle.display_name.replace("Vehículo ", "V"),
     value: vehicle.latest_telemetry?.validity.gps
       ? (vehicle.latest_telemetry.speed_kmh ?? null)
       : null,
@@ -216,10 +216,11 @@ export function DashboardPage() {
                 <strong>Temperatura por vehículo</strong>
                 <span>°C</span>
               </header>
-              <TelemetryChart
+              <FleetMetricChart
                 data={temperatureChart}
                 unit="°C"
                 label="Temperatura"
+                color="#087cf0"
               />
             </div>
             <div className="mini-chart">
@@ -227,7 +228,7 @@ export function DashboardPage() {
                 <strong>Velocidad actual</strong>
                 <span>km/h</span>
               </header>
-              <TelemetryChart
+              <FleetMetricChart
                 data={speedChart}
                 unit="km/h"
                 label="Velocidad"

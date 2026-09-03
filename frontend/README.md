@@ -14,6 +14,10 @@ advertencias amarillas y alertas rojas.
 - `null`, `NaN`, sensor inválido y ausencia de fix se muestran como `—`,
   `No válido` o `Sin GPS`; solo se muestra cero cuando es una medición válida.
 - `simulated` y `replayed` se conservan y el modo demo se anuncia en pantalla.
+- Las series conservan la medición original como trazo tenue y superponen una
+  tendencia visual: media móvil centrada de cinco muestras para temperatura,
+  humedad y presión, y mediana de tres muestras para velocidad. El filtrado no
+  atraviesa huecos inválidos ni modifica datos, alertas o valores actuales.
 
 ## Stack
 
@@ -73,7 +77,8 @@ datos simulados que realmente pasaron por HiveMQ, validación y PostgreSQL.
 - `/alerts`: filtros y acciones reconocer/resolver según rol.
 - `/trips`: historial GPS de 7 días por defecto, con filtros de 24 horas y 30 días.
 - `/trips/:trip_id`: mapa del recorrido, métricas, origen/destino y calidad GPS.
-- `/analytics`: series de 24 horas por vehículo.
+- `/analytics`: series por vehículo con medición original, tendencia suavizada y
+  ejes ajustados al rango observado; velocidad conserva una línea base de cero.
 - `/reports`: exportaciones CSV y JSON de la ventana consultada.
 - `/devices`: firmware, asignación y conectividad.
 - `/settings`: sesión, transporte y límites de seguridad.
@@ -109,6 +114,7 @@ Las pruebas cubren:
 - reconocimiento de alertas;
 - navegación responsive;
 - formato de valores y magnitud vectorial.
+- filtros de tendencia, preservación de huecos y dominios de los ejes.
 
 El procedimiento visual debe revisar dashboard, detalle, menú móvil y flujo de
 alertas a 1680×945, 1440×900 y 390×844. El repositorio no conserva una evidencia
@@ -129,6 +135,8 @@ fechada que permita tratar esa revisión manual como vigente.
 - La cartografía usa tiles públicos de OpenStreetMap; una instalación de gran
   escala debe revisar su política de uso o contratar un proveedor de tiles.
 - Las gráficas consultan ventanas acotadas por la API y no hacen agregación
-  estadística de largo plazo todavía.
+  estadística de largo plazo todavía. El endpoint de telemetría devuelve 500
+  muestras de forma predeterminada, por lo que una etiqueta de 24 horas no
+  garantiza esa cobertura cuando la frecuencia de publicación es alta.
 - Los valores acústicos son dBFS relativos; no son dB SPL calibrados.
 - La clasificación acústica heurística sigue marcada como no validada en campo.

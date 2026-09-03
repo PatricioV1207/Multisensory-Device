@@ -753,8 +753,39 @@ p {
   color: var(--blue);
 }
 .chart {
+  position: relative;
   width: 100%;
   height: 145px;
+}
+.chart-key {
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  pointer-events: none;
+}
+.chart-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-key span::before {
+  width: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+}
+.chart-key__raw {
+  opacity: 0.42;
+}
+.chart-key__trend {
+  font-weight: 650;
 }
 .panel > .chart {
   height: 185px;

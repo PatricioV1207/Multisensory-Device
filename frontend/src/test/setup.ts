@@ -48,8 +48,10 @@ vi.mock("recharts", () => {
   return {
     ResponsiveContainer: container,
     LineChart: container,
+    BarChart: container,
     PieChart: container,
     Line: empty,
+    Bar: empty,
     Pie: container,
     Cell: empty,
     CartesianGrid: empty,

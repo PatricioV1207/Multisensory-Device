@@ -259,6 +259,9 @@ export function VehicleDetailPage() {
             unit="km/h"
             label="Velocidad"
             color="#08a8a8"
+            smoothing="median"
+            smoothingWindow={3}
+            includeZero
           />
         </Panel>
         <Panel title="Temperatura (24 h)">
@@ -266,6 +269,8 @@ export function VehicleDetailPage() {
             data={chartPoints(telemetryHistory.data, "temperature_c")}
             unit="°C"
             label="Temperatura"
+            smoothing="mean"
+            smoothingWindow={5}
           />
         </Panel>
         <Panel title="Presión (24 h)">
@@ -274,6 +279,8 @@ export function VehicleDetailPage() {
             unit="hPa"
             label="Presión"
             color="#8b5cf6"
+            smoothing="mean"
+            smoothingWindow={5}
           />
         </Panel>
       </div>
