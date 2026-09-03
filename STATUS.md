@@ -98,6 +98,17 @@ operativos que no hayan sido observados.
   productiva contenía un viaje completado y sus 47 puntos declarados coincidían con
   47 filas de ruta; esto acredita persistencia en PostgreSQL, no un nuevo recorrido
   físico posterior al despliegue ni una copia externa del backup.
+- El 2026-09-03 UTC producción avanzó de `77d3f75` a `335ccc0`. El frontend
+  desplegado conserva las mediciones originales y superpone tendencias visuales
+  acotadas; usa media móvil de cinco muestras para temperatura, humedad y presión,
+  mediana de tres para velocidad, preserva huecos inválidos y presenta las
+  comparaciones entre vehículos como barras. La actualización creó el backup local
+  `vehiclesense_20260903T022355Z.dump` con checksum válido y guardó la revisión
+  previa. Los cuatro servicios quedaron saludables, Alembic permaneció en
+  `cd5ddc949e1d (head)`, la auditoría operativa terminó con 0 fallos y 0 advertencias,
+  `/health/live` y `/health/ready` respondieron 200 con PostgreSQL y MQTT listos, y
+  `www` redirigió al dominio raíz. Esto valida build, despliegue y salud operativa;
+  la inspección visual autenticada se realizó localmente, no sobre producción.
 - El 2026-08-31 se incorporó evidencia visual del diseño, fabricación y montaje de
   la revisión física: PCB portadora de cuatro capas y caja impresa en PETG. Esta
   evidencia respalda el proceso documentado en el informe final, pero no sustituye
