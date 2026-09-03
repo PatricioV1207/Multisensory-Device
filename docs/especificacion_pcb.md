@@ -7,6 +7,8 @@
 
 > Este documento describe una **PCB portadora de módulos**. El repositorio no contiene todavía un esquemático, una PCB de KiCad, footprints verificados, archivos Gerber ni dibujos mecánicos de los breakouts. Por lo tanto, este documento fija el comportamiento eléctrico y el netlist que el firmware necesita, pero no autoriza fabricar hasta cerrar las verificaciones de la sección [Bloqueos antes de fabricar](#14-bloqueos-antes-de-fabricar).
 
+> **Actualización de revisión (31-08-2026).** La evidencia visual incorporada en `docs/assets/informe_pcb_caja/` documenta la revisión física utilizada en el informe final como una **PCB de cuatro capas**, junto con su fabricación y ensamblaje. Las menciones a una PCB de dos capas que aparecen más adelante son recomendaciones preliminares de este borrador y no describen la revisión física actual; el *stack-up* detallado, el CAD fuente, los Gerber y la verificación eléctrica de cuatro capas todavía deben archivarse para cerrar este documento.
+
 ## 1. Resultado de la auditoría
 
 El firmware está construido para un `ESP32 DevKit` compatible con `esp32dev` de PlatformIO y utiliza estos módulos:

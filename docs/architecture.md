@@ -103,9 +103,11 @@ interna acotada entre callback MQTT y procesamiento.
 Las migraciones crean `users`, `vehicles`, `devices`, `telemetry`,
 `acoustic_measurements`, `alerts`, `trips`, `trip_points`,
 `device_status_history`, `commands` e `ingestion_failures`. Los viajes se infieren
-por GPS y los replay no alimentan esa inferencia en vivo. Las alertas usan lógica y
-umbrales del modelo actual; no existe una tabla genérica de reglas configurables.
-Tampoco hay limpieza automática de históricos.
+por GPS. La telemetría reproducida por la cola FIFO usa `measured_at` para
+reconstruir recorridos que llegaron tarde; un punto anterior al último aceptado no
+retrocede el viaje activo. Las alertas usan lógica y umbrales del modelo actual; no
+existe una tabla genérica de reglas configurables. Tampoco hay limpieza automática
+de históricos.
 
 ## API, tiempo real y control
 
@@ -131,8 +133,10 @@ OTA usa HTTP Basic en red local, no HTTPS, firma o rollback automático.
 
 React obtiene estado/historial por REST e invalida consultas por WebSocket. Incluye
 flota, mapas, detalle, alertas, viajes, analítica, reportes y modo demo explícito.
-Settings es informativo. CSV/JSON se generan en el navegador con las últimas 24 h
-consultadas. El backend sigue siendo la única frontera de autorización.
+El historial de viajes consulta 7 días por defecto y cada viaje abre su trayectoria
+persistida en `trip_points`, junto con métricas agregadas, origen/destino y calidad
+GPS. Settings es informativo. CSV/JSON se generan en el navegador con las últimas
+24 h consultadas. El backend sigue siendo la única frontera de autorización.
 
 ## Despliegue y operación
 
@@ -146,8 +150,10 @@ La topología es de una instancia, sin alta disponibilidad. Los scripts canónic
 externa, cifrado, retención y pruebas de restore son responsabilidades operativas.
 El repositorio no contiene inventario AWS ni logs privados. El contexto de despliegue
 del 2026-08-31 y las comprobaciones públicas de `/health/live` y `/health/ready`
-reportan el stack operativo contra PostgreSQL y HiveMQ reales; no sustituyen una
-auditoría de la VM, backups externos o una prueba física del ESP32.
+reportan el stack operativo contra PostgreSQL y HiveMQ reales. La sesión física
+fechada del 2026-08-31/09-01 UTC añadió evidencia del transporte básico ESP32--NTP--
+HiveMQ--backend; ninguna de estas observaciones sustituye una auditoría de la VM,
+backups externos, bring-up de sensores o una sesión física prolongada.
 
 ## Fronteras de confianza y seguridad
 
@@ -171,7 +177,9 @@ seguridad vehicular certificado.
 
 ## Brechas explícitas
 
-- Sin evidencia física ni E2E externa fechada.
+- Existe evidencia física E2E básica fechada para identidad, WiFi, NTP, TLS, MQTT,
+  PUBACK e ingesta; faltan sensores, replay, LWT inducido, fallos, comandos y
+  sesión prolongada.
 - Sin ejecución de comandos en firmware.
 - Sin replay durable para acústica/eventos.
 - Sin ACL por vehículo, sesiones revocables/logout ni API de historial de estado.
@@ -179,4 +187,7 @@ seguridad vehicular certificado.
 - SIM800L/TLS y clasificador acústico no validados en campo.
 - OTA sin firma/rollback; producción AWS es una sola VM y aún requiere observabilidad,
   backups externos y verificación operativa continuada.
-- PCB Rev A en borrador y bloqueada antes de fabricar.
+- La revisión física documentada en `docs/informe_diseno_fabricacion_pcb_caja.tex` se
+  reporta como una PCB de cuatro capas y caja PETG; la fuente CAD/stack-up/Gerber de
+  la Rev A aún no está archivada, por lo que permanece bloqueada para declarar
+  validación eléctrica o repetir una fabricación.

@@ -37,6 +37,7 @@ Internet para MQTT/TLS TCP 8883.
 | `scripts/bootstrap_ubuntu.sh` | Instala Docker en Ubuntu 24.04 ARM64/AMD64 |
 | `scripts/deploy.sh` | Valida, construye y converge el stack |
 | `scripts/update.sh` | Backup, fast-forward y despliegue de una actualización |
+| `scripts/audit_runtime.sh` | Preflight de solo lectura para operación y sesión E2E |
 | `scripts/backup_postgres.sh` | Backup lógico con checksum |
 | `scripts/restore_postgres.sh` | Restore manual, explícito y destructivo |
 | `scripts/renew-certificates.sh` | Renovación Certbot y recarga Nginx |

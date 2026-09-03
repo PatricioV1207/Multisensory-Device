@@ -352,6 +352,21 @@ fallido: ambos pueden perder datos creados después de la actualización.
 
 ## 10. Operación y comprobaciones
 
+Antes de una sesión E2E física ejecute el preflight de solo lectura. No imprime
+valores de secretos ni modifica servicios:
+
+```bash
+cd /opt/vehiclesense
+./deploy/scripts/audit_runtime.sh
+```
+
+El script verifica servicios, readiness, puerto y prefijo MQTT, auto-registro,
+variables bootstrap, swap, persistencia de swap, cron de Certbot, espacio en disco,
+checksum del backup local y limpieza del worktree. Un `PASS` acredita únicamente lo
+observado en esa ejecución. Backup externo, alertas de costos, fechas de rotación,
+parches y monitoreo AWS se reportan como controles manuales porque no pueden
+inferirse de la VM.
+
 ```bash
 docker compose --env-file deploy/.env -f deploy/compose.production.yml ps
 docker compose --env-file deploy/.env -f deploy/compose.production.yml logs --tail=100

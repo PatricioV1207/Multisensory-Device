@@ -101,7 +101,10 @@ VEHICLESENSE_MQTT_TOPIC_PREFIX=vehiclesense/v1
 ```
 
 Deje `MQTT_CA_FILE` vacío para usar el almacén de CA del sistema. El firmware
-usa el bundle CA de ESP32 y verifica el hostname.
+incluye en `src/communication/TrustedRootCa.h` la CA pública ISRG Root X1 que
+firma la cadena vigente del cluster y verifica el hostname. Si HiveMQ cambia de
+cadena, revise el trust anchor contra la cadena real antes de actualizarlo; no
+reemplace esta verificación por modo inseguro.
 
 ## 5. Secuencia de aceptación
 

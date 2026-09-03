@@ -80,32 +80,54 @@ ruta celular experimental; no son requisito para aceptar la ruta WiFi.
 
 Esta etapa requiere credenciales reales y PostgreSQL/Docker disponibles:
 
-1. Aplicar `alembic upgrade head` sobre PostgreSQL vacío y comprobar
+1. Ejecutar `deploy/scripts/audit_runtime.sh` en EC2 y conservar la salida fechada.
+   Resolver los `FAIL`; documentar los `WARN` aceptados y las cuatro verificaciones
+   manuales sin convertirlas en `PASS` automáticos.
+2. Aplicar `alembic upgrade head` sobre PostgreSQL vacío y comprobar
    `upgrade → downgrade → upgrade` antes de usar datos reales.
-2. Crear en HiveMQ credenciales separadas para backend, ESP32 y simulador con
+3. Crear en HiveMQ credenciales separadas para backend, ESP32 y simulador con
    las ACL de `hivemq_cloud.md`.
-3. Registrar `vehicle_id/device_id` mediante la API con auto-registro apagado.
-4. Arrancar backend y comprobar `/health/live=200` y `/health/ready=200`.
-5. Publicar tres vehículos desde `simulator --scenario mixed`; verificar mapa,
+4. Registrar `vehicle_id/device_id` mediante la API con auto-registro apagado.
+5. Arrancar backend y comprobar `/health/live=200` y `/health/ready=200`.
+6. Publicar tres vehículos desde `simulator --scenario mixed`; verificar mapa,
    estados, GPS inválido, acústica, alertas, paradas, viajes y marca Demo.
-6. Activar duplicados: el número de filas no debe aumentar para el mismo
+7. Activar duplicados: el número de filas no debe aumentar para el mismo
    `sample_id`. Activar inyección inválida: debe ir a cuarentena sin aparecer en
    telemetría.
-7. Detener/reiniciar backend y PostgreSQL por separado; MQTT debe reconectar y
+8. Detener/reiniciar backend y PostgreSQL por separado; MQTT debe reconectar y
    una reentrega QoS 1 no debe duplicar datos.
-8. Iniciar `vehiclesense_wifi`; confirmar que la UI nunca sustituye un sensor
+9. Iniciar `vehiclesense_wifi`; confirmar que la UI nunca sustituye un sensor
    inválido por cero y que la página local sigue disponible sin Internet.
-9. Cortar Internet, reiniciar ESP32 con muestras pendientes y restaurar red:
+10. Cortar Internet, reiniciar ESP32 con muestras pendientes y restaurar red:
    JSONL continúa, el spool sobrevive y el backend recibe `replayed=true`.
-10. Comprobar roles: viewer no modifica, operator gestiona alertas/comandos y
+11. Comprobar roles: viewer no modifica, operator gestiona alertas/comandos y
     admin crea usuarios/vehículos/dispositivos.
-11. Abrir dashboard y detalle a escritorio y móvil; no debe haber overflow,
+12. Abrir dashboard y detalle a escritorio y móvil; no debe haber overflow,
     errores de consola ni credenciales MQTT en los assets.
-12. Ejecutar backup, verificar checksum y ensayar restauración en una base de
+13. Ejecutar backup, verificar checksum y ensayar restauración en una base de
     prueba antes de aceptar producción.
 
 La prueba física y la cloud son complementarias: datos sintéticos validan el
 flujo, no el cableado, la precisión de sensores o el clasificador acústico.
+
+### Evidencia física E2E básica del 2026-08-31/09-01 UTC
+
+- ESP32-D0WD-V3 revisión 3.1, MAC eFuse `d0:ef:76:45:f6:40`.
+- IDs registrados: `vehicle-001` y `esp32-d0ef7645f640`.
+- Credencial HiveMQ independiente con permiso limitado a la raíz MQTT del dispositivo.
+- `pio run -e vehiclesense_wifi -t upload --upload-port /dev/cu.usbserial-0001`:
+  carga correcta, RAM 24.1 % y flash 58.1 % en la imagen final.
+- El serial emitió telemetría v3 con IDs correctos y `simulated=false`; los sensores
+  ausentes/no disponibles se conservaron como inválidos.
+- Se corrigió el rechazo de una hora NTP válida causado por el desbordamiento del
+  límite `2100-01-01` en `time_t` de 32 bits. El serial confirmó `time_valid=true`.
+- Se sustituyó el bundle CA de Arduino sin inicializar por la CA pública ISRG Root X1
+  explícita, manteniendo verificación de hostname. HiveMQ conectó por TLS.
+- Cuatro muestras consecutivas recibieron PUBACK QoS 1. La API productiva devolvió el
+  dispositivo `online`, firmware `0.2.0`, y 20 muestras físicas recientes; la última
+  consultada fue `esp32-d0ef7645f640:13:275`.
+- Este PASS cubre transporte e ingesta básica. No cubre sensores, microSD, LWT,
+  deduplicación, replay, comandos ni una sesión prolongada.
 
 ## BH1750 y bus I2C
 

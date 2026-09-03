@@ -3,13 +3,14 @@
 #include <esp_sntp.h>
 #include <sys/time.h>
 #include <time.h>
+#include <cstdint>
 #include <cstdio>
 #include "config.h"
 #include "utils/Logger.h"
 
 namespace {
-constexpr time_t kMinimumValidEpoch = 1704067200;  // 2024-01-01 UTC.
-constexpr time_t kMaximumValidEpoch = 4102444800;  // 2100-01-01 UTC.
+constexpr int64_t kMinimumValidEpoch = 1704067200LL;  // 2024-01-01 UTC.
+constexpr int64_t kMaximumValidEpoch = 4102444800LL;  // 2100-01-01 UTC.
 }
 
 void TimeService::begin() {
@@ -57,7 +58,8 @@ bool TimeService::synchronizeFromGps(const GPSData& gps) {
   utc.tm_sec = gps.utcSecond;
   utc.tm_isdst = 0;
   const time_t epoch = mktime(&utc);
-  if (epoch < kMinimumValidEpoch || epoch >= kMaximumValidEpoch) {
+  const int64_t epochValue = static_cast<int64_t>(epoch);
+  if (epochValue < kMinimumValidEpoch || epochValue >= kMaximumValidEpoch) {
     return false;
   }
   const struct timeval value = {epoch, 0};
@@ -65,7 +67,7 @@ bool TimeService::synchronizeFromGps(const GPSData& gps) {
 }
 
 bool TimeService::systemClockValid() const {
-  const time_t now = time(nullptr);
+  const int64_t now = static_cast<int64_t>(time(nullptr));
   return now >= kMinimumValidEpoch && now < kMaximumValidEpoch;
 }
 

@@ -83,7 +83,7 @@ El sistema convierte mediciones heterogéneas en telemetría útil y trazable. E
     </td>
     <td width="50%" align="center">
       <img src="docs/assets/readme/pcb-3d.png" alt="Vista tridimensional de la PCB del nodo embarcado" width="100%"><br>
-      <sub><strong>Concepto PCB:</strong> referencia visual; Rev A sigue en borrador y no debe fabricarse.</sub>
+      <sub><strong>Concepto PCB:</strong> referencia visual; la revisión física de cuatro capas se documenta en el informe final y la fuente CAD de Rev A sigue pendiente.</sub>
     </td>
   </tr>
 </table>
@@ -375,7 +375,7 @@ El último comando usa el entorno Python del backend, que incluye `jsonschema`.
 | [Almacenamiento](docs/storage.md) | JSONL, cola offline, rotación y replay |
 | [Monitoreo acústico](docs/acoustic_monitoring.md) | I2S, dBFS, características y límites |
 | [Seguridad](docs/security.md) | Modelo de confianza y riesgos pendientes |
-| [Especificación PCB Rev A](docs/especificacion_pcb.md) | Borrador técnico; bloqueada antes de fabricar |
+| [Especificación PCB Rev A](docs/especificacion_pcb.md) | Borrador de reglas eléctricas; la revisión física de cuatro capas se documenta en el informe final |
 | [Despliegue AWS EC2](deploy/aws/README.md) | Instancia, DNS, HTTPS, operación y rollback |
 
 ## Estado actual

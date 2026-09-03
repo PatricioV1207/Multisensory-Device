@@ -19,7 +19,8 @@
 #define MQTT_TOPIC "v1/devices/me/telemetry"
 
 // Production transport: HiveMQ Cloud MQTT over TLS. The ESP32
-// uses the built-in CA bundle and still validates the broker hostname.
+// uses the public trust anchor compiled into the firmware and validates the
+// broker hostname.
 #define HIVEMQ_HOST "YOUR_CLUSTER.s1.eu.hivemq.cloud"
 #define HIVEMQ_PORT 8883
 #define HIVEMQ_USERNAME "YOUR_HIVEMQ_DEVICE_USERNAME"

@@ -13,9 +13,11 @@ simulador y del hardware.
 
 ## 2. Validar hardware y PCB
 
-Resolver los bloqueos de la especificación Rev A, revisar esquema/footprints/ERC/DRC,
-fabricar solo tras aprobación y completar bring-up eléctrico, buses, sensores,
-alimentación, montaje y calibración con evidencia fechada.
+La revisión física de cuatro capas y su caja cuentan con evidencia visual en el
+informe final. Resta resolver los bloqueos de la especificación Rev A, archivar el
+esquema/footprints/*stack-up*/Gerbers/BOM, revisar ERC/DRC y completar el *bring-up*
+eléctrico, buses, sensores, alimentación y calibración con evidencia fechada antes
+de declarar validada la integración o repetir una fabricación.
 
 ## 3. Completar comandos, autorización y operación
 

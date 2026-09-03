@@ -1,10 +1,10 @@
 #include "communication/SecureMqttClient.h"
 
-#include <esp_crt_bundle.h>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
 #include <cstring>
+#include "communication/TrustedRootCa.h"
 #include "config.h"
 #include "utils/Logger.h"
 
@@ -50,7 +50,7 @@ bool SecureMqttClient::begin(uint32_t bootId) {
   mqttConfig.buffer_size = VEHICLESENSE_MQTT_BUFFER_SIZE;
   mqttConfig.out_buffer_size = VEHICLESENSE_MQTT_BUFFER_SIZE;
   mqttConfig.transport = MQTT_TRANSPORT_OVER_SSL;
-  mqttConfig.crt_bundle_attach = arduino_esp_crt_bundle_attach;
+  mqttConfig.cert_pem = kIsrgRootX1Pem;
   mqttConfig.protocol_ver = MQTT_PROTOCOL_V_3_1_1;
   mqttConfig.skip_cert_common_name_check = false;
   mqttConfig.network_timeout_ms = MQTT_SOCKET_TIMEOUT_SECONDS * 1000U;
@@ -161,10 +161,17 @@ esp_err_t SecureMqttClient::handleEvent(
         if (event->error_handle->error_type ==
             MQTT_ERROR_TYPE_CONNECTION_REFUSED) {
           _lastError = 100 + event->error_handle->connect_return_code;
+          Logger::warn(
+              "MQTT", "Broker rejected connection code=" +
+                          String(event->error_handle->connect_return_code));
         } else {
           _lastError = event->error_handle->esp_tls_last_esp_err;
           Logger::warn(
               "MQTT", "TLS/network error=" + String(_lastError) +
+                          " stack=" +
+                          String(event->error_handle->esp_tls_stack_err) +
+                          " errno=" +
+                          String(event->error_handle->esp_transport_sock_errno) +
                           " verify_flags=" +
                           String(event->error_handle->esp_tls_cert_verify_flags,
                                  HEX));
