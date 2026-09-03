@@ -71,7 +71,8 @@ datos simulados que realmente pasaron por HiveMQ, validación y PostgreSQL.
 - `/vehicles`: búsqueda e inventario.
 - `/vehicles/:vehicle_id`: ruta, telemetría, salud, acústica e histórico.
 - `/alerts`: filtros y acciones reconocer/resolver según rol.
-- `/trips`: viajes GPS inferidos, distancia y velocidades.
+- `/trips`: historial GPS de 7 días por defecto, con filtros de 24 horas y 30 días.
+- `/trips/:trip_id`: mapa del recorrido, métricas, origen/destino y calidad GPS.
 - `/analytics`: series de 24 horas por vehículo.
 - `/reports`: exportaciones CSV y JSON de la ventana consultada.
 - `/devices`: firmware, asignación y conectividad.
@@ -122,7 +123,7 @@ fechada que permita tratar esa revisión manual como vigente.
   existe exportación histórica de servidor.
 - La suite automatizada se concentra en el adaptador demo y no demuestra REST/WS
   contra un backend desplegado.
-- `TripsPage`, `DevicesPage` y `VehicleDetailPage` etiquetan como “Producción” los
+- `DevicesPage` y `VehicleDetailPage` etiquetan como “Producción” los
   registros con `simulated=false`. Ese valor solo significa no simulado; la UI debe
   usar “Real/no simulado” y reservar “Producción” para una procedencia verificable.
 - La cartografía usa tiles públicos de OpenStreetMap; una instalación de gran

@@ -4,7 +4,9 @@ import {
   Polyline,
   Popup,
   TileLayer,
+  useMap,
 } from "react-leaflet";
+import { useEffect } from "react";
 import type { Position, RoutePoint } from "../../types/api";
 import { valueWithUnit } from "../../lib/format";
 
@@ -52,7 +54,10 @@ export function RouteMap({
   points,
   title,
 }: {
-  points: RoutePoint[];
+  points: Pick<
+    RoutePoint,
+    "latitude" | "longitude" | "speed_kmh" | "recorded_at"
+  >[];
   title: string;
 }) {
   const coordinates = points.map(
@@ -66,6 +71,7 @@ export function RouteMap({
       scrollWheelZoom
       className="map-canvas"
     >
+      <RouteViewport coordinates={coordinates} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -106,4 +112,16 @@ export function RouteMap({
       )}
     </MapContainer>
   );
+}
+
+function RouteViewport({ coordinates }: { coordinates: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coordinates.length > 1) {
+      map.fitBounds(coordinates, { padding: [28, 28], maxZoom: 16 });
+    } else if (coordinates.length === 1) {
+      map.setView(coordinates[0], 16);
+    }
+  }, [coordinates, map]);
+  return null;
 }

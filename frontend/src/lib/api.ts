@@ -17,6 +17,7 @@ import type {
   Telemetry,
   TokenPair,
   Trip,
+  TripDetail,
   UserProfile,
   VehicleDetail,
   VehicleListItem,
@@ -207,7 +208,7 @@ export const api = {
       body: JSON.stringify({ action }),
     });
   },
-  async trips(vehicleId?: string): Promise<Trip[]> {
+  async trips(vehicleId?: string, days = 7): Promise<Trip[]> {
     if (isDemoMode) {
       return structuredClone(
         vehicleId
@@ -215,9 +216,40 @@ export const api = {
           : demoTrips,
       );
     }
-    return request<Trip[]>(
-      `/api/v1/trips${vehicleId ? `?vehicle_id=${vehicleId}` : ""}`,
-    );
+    const search = new URLSearchParams({ days: String(days) });
+    if (vehicleId) search.set("vehicle_id", vehicleId);
+    return request<Trip[]>(`/api/v1/trips?${search.toString()}`);
+  },
+  async trip(tripId: string): Promise<TripDetail> {
+    if (isDemoMode) {
+      const trip = demoTrips.find((item) => item.id === tripId);
+      if (!trip) throw new ApiError(404, "Viaje no encontrado");
+      const route = trip.vehicle_id ? demoRoutes[trip.vehicle_id] : undefined;
+      const points = (route?.points ?? []).map((point, index) => ({
+        latitude: point.latitude,
+        longitude: point.longitude,
+        speed_kmh: point.speed_kmh,
+        hdop: 0.8 + (index % 4) * 0.1,
+        recorded_at: point.recorded_at,
+      }));
+      const maximumSpeedPoint = points.reduce<(typeof points)[number] | null>(
+        (maximum, point) =>
+          point.speed_kmh != null &&
+          (maximum?.speed_kmh == null || point.speed_kmh > maximum.speed_kmh)
+            ? point
+            : maximum,
+        null,
+      );
+      return {
+        ...structuredClone(trip),
+        average_gps_hdop: points.length
+          ? points.reduce((sum, point) => sum + point.hdop, 0) / points.length
+          : null,
+        maximum_speed_at: maximumSpeedPoint?.recorded_at ?? null,
+        points,
+      };
+    }
+    return request<TripDetail>(`/api/v1/trips/${encodeURIComponent(tripId)}`);
   },
 };
 

@@ -262,16 +262,26 @@ export const demoRoutes: Record<string, RouteData> = Object.fromEntries(
         { vehicle_id: vehicle.vehicle_id, points: [] },
       ];
     }
-    const points = Array.from({ length: 20 }, (_, index) => ({
-      latitude: current.latitude! - (19 - index) * 0.0011,
-      longitude:
-        current.longitude! +
-        Math.sin(index / 3) * 0.0017 -
-        (19 - index) * 0.0004,
-      speed_kmh: Math.max(0, (current.speed_kmh ?? 0) + Math.sin(index) * 8),
-      recorded_at: isoAgo((19 - index) * 120 + vehicleIndex * 20),
-      replayed: false,
-    }));
+    const trip = demoTrips.find(
+      (item) => item.vehicle_id === vehicle.vehicle_id,
+    );
+    const pointCount = trip?.point_count ?? 20;
+    const points = Array.from({ length: pointCount }, (_, index) => {
+      const progress = index / Math.max(pointCount - 1, 1);
+      return {
+        latitude: current.latitude! - (1 - progress) * 0.0209,
+        longitude:
+          current.longitude! +
+          Math.sin(progress * Math.PI * 2) * 0.0017 -
+          (1 - progress) * 0.0076,
+        speed_kmh:
+          index === Math.floor(pointCount * 0.65)
+            ? (trip?.maximum_speed_kmh ?? current.speed_kmh)
+            : Math.max(0, (current.speed_kmh ?? 0) + Math.sin(index) * 8),
+        recorded_at: isoAgo((pointCount - 1 - index) * 30 + vehicleIndex * 20),
+        replayed: false,
+      };
+    });
     return [vehicle.vehicle_id, { vehicle_id: vehicle.vehicle_id, points }];
   }),
 );

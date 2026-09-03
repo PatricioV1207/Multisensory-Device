@@ -1407,6 +1407,51 @@ p {
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.trip-route-panel .map-canvas,
+.trip-route-panel .async-state {
+  height: min(58vh, 520px);
+  min-height: 360px;
+}
+.trip-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.trip-detail-list {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.trip-detail-list > div {
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #f7f9fc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.trip-detail-list dt {
+  color: var(--muted);
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.trip-detail-list dt svg {
+  color: var(--blue);
+}
+.trip-detail-list dd {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
 }
 .device-grid {
   display: grid;
@@ -1927,6 +1972,7 @@ p {
   .vehicle-chart-grid,
   .analytics-chart-grid,
   .trip-cards,
+  .trip-detail-grid,
   .report-grid,
   .settings-grid {
     grid-template-columns: 1fr;
@@ -2038,6 +2084,18 @@ p {
   }
   .full-map-panel .map-canvas {
     height: 440px;
+  }
+  .trip-route-panel .map-canvas,
+  .trip-route-panel .async-state {
+    height: 410px;
+    min-height: 0;
+  }
+  .trip-detail-list > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .trip-detail-list dd {
+    text-align: left;
   }
   .select-control {
     width: 100%;

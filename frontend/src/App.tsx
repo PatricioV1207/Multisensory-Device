@@ -23,6 +23,9 @@ const AlertsPage = lazy(async () => ({
 const TripsPage = lazy(async () => ({
   default: (await import("./pages/TripsPage")).TripsPage,
 }));
+const TripDetailPage = lazy(async () => ({
+  default: (await import("./pages/TripDetailPage")).TripDetailPage,
+}));
 const AnalyticsPage = lazy(async () => ({
   default: (await import("./pages/AnalyticsPage")).AnalyticsPage,
 }));
@@ -55,6 +58,7 @@ export function App() {
           <Route path="vehicles/:vehicleId" element={<VehicleDetailPage />} />
           <Route path="alerts" element={<AlertsPage />} />
           <Route path="trips" element={<TripsPage />} />
+          <Route path="trips/:tripId" element={<TripDetailPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="devices" element={<DevicesPage />} />

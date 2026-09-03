@@ -36,7 +36,7 @@ class TripService:
         event_time: datetime,
     ) -> Trip | None:
         event_time = ensure_utc(event_time)
-        if telemetry.replayed or not telemetry.gps_valid:
+        if not telemetry.gps_valid:
             return None
         if (
             telemetry.latitude is None

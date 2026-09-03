@@ -35,6 +35,10 @@ vi.mock("react-leaflet", () => ({
   Popup: ({ children }: { children?: ReactNode }) =>
     createElement("span", null, children),
   Polyline: () => null,
+  useMap: () => ({
+    fitBounds: vi.fn(),
+    setView: vi.fn(),
+  }),
 }));
 
 vi.mock("recharts", () => {

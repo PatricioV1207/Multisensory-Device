@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import current_user, get_session, require_roles
@@ -536,10 +536,23 @@ async def update_alert(
 @router.get("/trips")
 async def list_trips(
     vehicle_id: str | None = None,
-    limit: int = Query(default=100, ge=1, le=1000),
+    days: int = Query(default=7, ge=1, le=90),
+    limit: int = Query(default=1000, ge=1, le=5000),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
-    statement = select(Trip).order_by(Trip.started_at.desc()).limit(limit)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    statement = (
+        select(Trip)
+        .where(
+            or_(
+                Trip.started_at >= cutoff,
+                Trip.ended_at >= cutoff,
+                Trip.status == "active",
+            )
+        )
+        .order_by(Trip.started_at.desc())
+        .limit(limit)
+    )
     vehicle = None
     if vehicle_id:
         vehicle = await session.scalar(select(Vehicle).where(Vehicle.vehicle_id == vehicle_id))
@@ -572,8 +585,17 @@ async def trip_detail(trip_id: str, session: AsyncSession = Depends(get_session)
             )
         ).all()
     )
+    hdop_values = [item.hdop for item in points if item.hdop is not None]
+    points_with_speed = [item for item in points if item.speed_kmh is not None]
+    maximum_speed_point = (
+        max(points_with_speed, key=lambda item: item.speed_kmh or 0.0)
+        if points_with_speed
+        else None
+    )
     return {
         **trip_data(trip, vehicle.vehicle_id if vehicle else None),
+        "average_gps_hdop": (sum(hdop_values) / len(hdop_values) if hdop_values else None),
+        "maximum_speed_at": iso(maximum_speed_point.recorded_at) if maximum_speed_point else None,
         "points": [
             {
                 "latitude": item.latitude,

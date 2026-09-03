@@ -16,6 +16,7 @@ from app.models import (
     IngestionFailure,
     Telemetry,
     Trip,
+    TripPoint,
 )
 from app.services.ingestion import IngestionService
 from app.websocket.manager import LiveUpdateManager
@@ -167,3 +168,40 @@ async def test_temperature_alert_lifecycle_and_basic_trip_detection(ingestion) -
         )
         assert len(alerts) == 1
         assert alerts[0].status == "resolved"
+
+
+@pytest.mark.asyncio
+async def test_replayed_telemetry_reconstructs_trip_and_route(ingestion) -> None:
+    service, database = ingestion
+    template = contract_fixture("telemetry_v3_full_simulated.json")
+    start = datetime(2026, 7, 21, 2, 0, tzinfo=UTC)
+
+    for sequence, seconds, speed in [
+        (1, 0, 25.0),
+        (2, 10, 28.0),
+        (3, 20, 30.0),
+        (4, 30, 0.0),
+        (5, 50, 0.0),
+    ]:
+        payload = copy.deepcopy(template)
+        event_time = start + timedelta(seconds=seconds)
+        payload["sequence"] = sequence
+        payload["sample_id"] = f"sim-device-001:88:{sequence}"
+        payload["uptime_ms"] = sequence * 10_000
+        payload["measured_at"] = event_time.isoformat().replace("+00:00", "Z")
+        payload["replayed"] = True
+        payload["speed_kmh"] = speed
+        payload["longitude"] += sequence * 0.0001
+        outcome = await service.ingest(
+            topic("telemetry"),
+            json.dumps(payload),
+            received_at=start + timedelta(hours=1, seconds=seconds),
+        )
+        assert outcome.accepted
+
+    async with database.sessions() as session:
+        trip = await session.scalar(select(Trip))
+        assert trip is not None
+        assert trip.status == "completed"
+        assert trip.point_count == 4
+        assert await session.scalar(select(func.count(TripPoint.id))) == 4

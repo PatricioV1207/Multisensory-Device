@@ -155,8 +155,16 @@ reconecta para solicitar la reentrega. Las claves `sample_id`, `dedupe_key`,
 | `ingestion_failures` | mensajes rechazados sin guardar secretos de conexión |
 
 La hora de medición y la hora de recepción se almacenan por separado. Los
-registros `replayed` no alteran el detector de viajes en vivo y los registros
-`simulated` permanecen identificados en toda la ruta.
+registros `replayed` se procesan con su hora de medición para reconstruir viajes
+recibidos desde la cola FIFO del dispositivo; puntos anteriores o duplicados no
+retroceden un viaje activo. Los registros `simulated` permanecen identificados en
+toda la ruta.
+
+`GET /api/v1/trips` devuelve por defecto los viajes que se solapan con los
+últimos 7 días; `days` permite consultar entre 1 y 90 días y la respuesta queda
+acotada a 1000 registros por defecto. El detalle de un viaje devuelve sus puntos
+ordenados, HDOP medio y la hora de la velocidad GPS máxima, además de distancia,
+duración y velocidades agregadas.
 
 ## Calidad
 

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import copy
 import json
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
+from app.models import Trip, Vehicle
 from tests.conftest import contract_fixture
 
 
@@ -77,6 +81,73 @@ def test_ingested_telemetry_reaches_rest_and_websocket(
         assert socket.receive_json()["type"] == "subscription.updated"
         socket.send_json({"action": "ping"})
         assert socket.receive_json() == {"type": "pong"}
+
+
+def test_weekly_trip_history_and_route_detail(
+    api_client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    template = contract_fixture("telemetry_v3_full_simulated.json")
+    topic = "vehiclesense/v1/vehicles/sim-vehicle-001/devices/sim-device-001/telemetry"
+    started_at = datetime.now(UTC) - timedelta(minutes=5)
+
+    for sequence, seconds, speed in [
+        (1, 0, 30.0),
+        (2, 10, 30.0),
+        (3, 20, 35.0),
+        (4, 30, 0.0),
+        (5, 50, 0.0),
+    ]:
+        payload = copy.deepcopy(template)
+        event_time = started_at + timedelta(seconds=seconds)
+        payload["sequence"] = sequence
+        payload["sample_id"] = f"sim-device-001:77:{sequence}"
+        payload["uptime_ms"] = sequence * 10_000
+        payload["measured_at"] = event_time.isoformat().replace("+00:00", "Z")
+        payload["speed_kmh"] = speed
+        payload["latitude"] += sequence * 0.0001
+        outcome = api_client.portal.call(
+            api_client.app.state.ingestion.ingest,
+            topic,
+            json.dumps(payload),
+            event_time,
+        )
+        assert outcome.accepted
+
+    async def add_old_trip() -> None:
+        async with api_client.app.state.database.sessions() as session, session.begin():
+            vehicle = await session.scalar(
+                select(Vehicle).where(Vehicle.vehicle_id == "sim-vehicle-001")
+            )
+            assert vehicle is not None
+            old_started_at = started_at - timedelta(days=8)
+            session.add(
+                Trip(
+                    vehicle_id=vehicle.id,
+                    status="completed",
+                    started_at=old_started_at,
+                    ended_at=old_started_at + timedelta(minutes=20),
+                    distance_km=2.0,
+                )
+            )
+
+    api_client.portal.call(add_old_trip)
+
+    weekly = api_client.get("/api/v1/trips", headers=admin_headers)
+    assert weekly.status_code == 200
+    assert len(weekly.json()) == 1
+    trip = weekly.json()[0]
+    assert trip["status"] == "completed"
+    assert trip["point_count"] == 4
+
+    detail = api_client.get(f"/api/v1/trips/{trip['id']}", headers=admin_headers)
+    assert detail.status_code == 200
+    assert len(detail.json()["points"]) == 4
+    assert detail.json()["average_gps_hdop"] is not None
+    assert detail.json()["maximum_speed_at"] is not None
+
+    monthly = api_client.get("/api/v1/trips?days=30", headers=admin_headers)
+    assert monthly.status_code == 200
+    assert len(monthly.json()) == 2
 
 
 def test_websocket_rejects_missing_authentication_message(api_client: TestClient) -> None:

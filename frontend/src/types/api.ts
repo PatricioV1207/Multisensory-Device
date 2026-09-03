@@ -103,6 +103,20 @@ export interface Trip {
   simulated: boolean;
 }
 
+export interface TripPoint {
+  latitude: number;
+  longitude: number;
+  speed_kmh: number | null;
+  hdop: number | null;
+  recorded_at: string;
+}
+
+export interface TripDetail extends Trip {
+  average_gps_hdop: number | null;
+  maximum_speed_at: string | null;
+  points: TripPoint[];
+}
+
 export interface DashboardData {
   generated_at: string;
   totals: {

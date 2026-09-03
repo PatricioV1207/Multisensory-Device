@@ -1,4 +1,5 @@
-import { Clock3, Gauge, MapPin, Route } from "lucide-react";
+import { CalendarDays, Clock3, Gauge, MapPin, Route } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   EmptyState,
@@ -14,7 +15,8 @@ import {
 } from "../lib/format";
 
 export function TripsPage() {
-  const trips = useTrips();
+  const [days, setDays] = useState(7);
+  const trips = useTrips(undefined, days);
   if (trips.isLoading) return <PageLoader label="Cargando viajes…" />;
   if (trips.isError) return <ErrorState retry={() => void trips.refetch()} />;
   return (
@@ -24,14 +26,33 @@ export function TripsPage() {
           <span className="eyebrow">Movimiento GPS</span>
           <h1>Viajes</h1>
           <p>
-            Trayectos inferidos por velocidad y posiciones válidas; no
-            representan encendido.
+            Trayectos guardados automáticamente a partir de posiciones GPS
+            válidas; no representan encendido.
           </p>
         </div>
         <span className="page-count">
           <Route size={15} /> {trips.data?.length ?? 0}
         </span>
       </header>
+      <div className="page-toolbar" aria-label="Periodo de viajes">
+        <span className="toolbar-label">
+          <CalendarDays size={15} /> Periodo
+        </span>
+        {[
+          [1, "24 horas"],
+          [7, "7 días"],
+          [30, "30 días"],
+        ].map(([value, label]) => (
+          <button
+            type="button"
+            key={value}
+            className={`filter-chip ${days === value ? "filter-chip--active" : ""}`}
+            onClick={() => setDays(Number(value))}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {!trips.data?.length ? (
         <EmptyState
           title="Todavía no hay viajes"
@@ -46,13 +67,7 @@ export function TripsPage() {
                   <Route size={21} />
                 </span>
                 <div>
-                  <Link
-                    to={
-                      trip.vehicle_id
-                        ? `/vehicles/${trip.vehicle_id}`
-                        : "/vehicles"
-                    }
-                  >
+                  <Link to={`/trips/${trip.id}`}>
                     {trip.vehicle_id ?? "Sin vehículo"}
                   </Link>
                   <small>{formatDateTime(trip.started_at)}</small>
@@ -96,8 +111,13 @@ export function TripsPage() {
                 </span>
               </div>
               <footer>
-                {trip.point_count} puntos GPS ·{" "}
-                {trip.simulated ? "Datos simulados" : "Datos de producción"}
+                <span>
+                  {trip.point_count} puntos GPS ·{" "}
+                  {trip.simulated ? "Datos simulados" : "Real/no simulado"}
+                </span>
+                <Link className="text-link" to={`/trips/${trip.id}`}>
+                  Ver recorrido
+                </Link>
               </footer>
             </article>
           ))}

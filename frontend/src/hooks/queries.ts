@@ -42,10 +42,17 @@ export const useAcoustic = (vehicleId: string, hours = 24) =>
 export const useAlerts = (status?: string) =>
   useQuery({ queryKey: ["alerts", status], queryFn: () => api.alerts(status) });
 
-export const useTrips = (vehicleId?: string) =>
+export const useTrips = (vehicleId?: string, days = 7) =>
   useQuery({
-    queryKey: ["trips", vehicleId],
-    queryFn: () => api.trips(vehicleId),
+    queryKey: ["trips", vehicleId, days],
+    queryFn: () => api.trips(vehicleId, days),
+  });
+
+export const useTrip = (tripId: string) =>
+  useQuery({
+    queryKey: ["trip", tripId],
+    queryFn: () => api.trip(tripId),
+    enabled: Boolean(tripId),
   });
 
 export const useDevices = () =>

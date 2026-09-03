@@ -73,4 +73,23 @@ describe("vehicle monitoring application", () => {
       "sidebar--open",
     );
   });
+
+  it("opens a saved trip with its complete route summary", async () => {
+    const user = userEvent.setup();
+    authenticateDemo();
+    renderApp("/trips");
+    expect(
+      await screen.findByRole("heading", { name: "Viajes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "7 días" })).toHaveClass(
+      "filter-chip--active",
+    );
+    await user.click(screen.getAllByRole("link", { name: "Ver recorrido" })[0]);
+    expect(
+      await screen.findByRole("heading", { name: "Detalle del viaje" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ruta del viaje")).toBeInTheDocument();
+    expect(screen.getByText(/puntos GPS guardados/)).toBeInTheDocument();
+    expect(screen.getByText("HDOP medio")).toBeInTheDocument();
+  });
 });
